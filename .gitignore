@@ -35,3 +35,4 @@ Simulator/hidden_libxl.h
 # Chutzpah Test files
 *.VC.db
 /Simulator/.vs/Simulator/v16
+/Simulator/x64/Debug

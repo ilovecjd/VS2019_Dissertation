@@ -280,6 +280,8 @@ void CSimulatorDlg::OnBnClickedCreateProject()
 
 	CCreator Creator; 
 	Creator.Init(m_pGlobalEnv, actTemp, patternTemp);
+	CString strFileName = _T("d:/test/test.xlsx");
+	Creator.Save(strFileName);
 	//Creator.PrintProjectInfo();
 	
 	return ;

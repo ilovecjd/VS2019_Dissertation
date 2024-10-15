@@ -31,7 +31,7 @@ BOOL CCreator::Init(GLOBAL_ENV* pGlobalEnv, ALL_ACT_TYPE* pActType, ALL_ACTIVITY
 	m_totalProjectNum = CreateAllProjects();
 
 	// 디버깅 정보를 출력한다.
-	PrintProjectInfo();
+	//PrintProjectInfo();
 
 	//CreateOrderTable();//m_totalProjectNum 생성 (내부프로젝트 3개 만큼 크게)
 	//m_pProjects = new PROJECT[m_totalProjectNum];
@@ -581,80 +581,76 @@ void CCreator::CalculatePaymentSchedule(PROJECT* pProject) {
 
 void CCreator::Save(CString filename)
 {
-	ULONG ulTotalWritten = 0;
-	FILE* fp = nullptr;
-	if (!OpenFile(filename, _T("wb"), &fp)) return;
-	
-	
-	SAVE_SIG sig;
-	ulTotalWritten += fwrite(&sig, 1, sizeof(sig), fp);  // 파일 시작 부분에 시그니처 쓰기	
-	ulTotalWritten += WriteDataWithHeader(fp, TYPE_ENVIRONMENT, &m_GlobalEnv, sizeof(GLOBAL_ENV));
-	ulTotalWritten += WriteDataWithHeader(fp, TYPE_ACTIVITY, &m_ActType, sizeof(ALL_ACT_TYPE));
-	ulTotalWritten += WriteDataWithHeader(fp, TYPE_PATTERN, &m_ActPattern, sizeof(ALL_ACTIVITY_PATTERN));
 
-	// 모아서 적어야 한다.
-	int size = m_orderTable.getCols() * m_orderTable.getRows();
-	int* temp = new int[size];
-	m_orderTable.copyToContinuousMemory(temp, size);
+	Book* book = xlCreateXMLBook();  // Use xlCreateBook() for xls format	
 
-	ULONG orderTableSize = sizeof(int) * size;  // 바이트 단위로 크기 계산
-	ulTotalWritten += WriteDataWithHeader(fp, TYPE_ORDER, temp, orderTableSize);
-	
-
-	WriteProjet(fp);
-	
-	sig.totalLen = ulTotalWritten;
-	fseek(fp, 0, SEEK_SET);  // 파일 포인터를 파일의 시작 위치로 이동	
-	fwrite(&sig, 1, sizeof(sig), fp);  // 수정된 시그니처 다시 쓰기
-
-	// 파일 닫기
-	CloseFile(&fp);
-	delete[] temp;
-
-}
+	// 정품 키 값이 들어 있다. 공개하는 프로젝트에는 포함되어 있지 않다. 
+	// 정품 키가 없으면 읽기가 300 컬럼으로 제한된다.
+#ifdef INCLUDE_LIBXL_KET
+	book->setKey(_LIBXL_NAME, _LIBXL_KEY);
+#endif
 
 
-void CCreator::WriteProjet(FILE* fp)
-{
-	SAVE_TL tl ;
-	tl.length =  m_totalProjectNum;
-	tl.type = TYPE_PROJECT;
+	Sheet* projectSheet = nullptr;
+	Sheet* dashboardSheet = nullptr;
 
-	ULONG ulTemp = 0;
-	ULONG ulWritten = 0;
+	if (book->load(filename)) {
+		// File exists, check for specific sheets
 
-	ulTemp = fwrite(&tl, sizeof(tl), 1, fp);  // 먼저 데이터 타입 및 길이 정보를 쓴다
-	ulWritten += ulTemp * sizeof(tl);
 
-	int test = sizeof(PROJECT);
+		for (int i = 0; i < book->sheetCount(); ++i) {
+			Sheet* sheet = book->getSheet(i);
+			if (std::wcscmp(sheet->name(), L"project") == 0) {
+				projectSheet = sheet;
+				clearSheet(projectSheet);  // Assuming you have a clearSheet function defined
+			}
+			if (std::wcscmp(sheet->name(), L"dashboard") == 0) {
+				dashboardSheet = sheet;
+				clearSheet(dashboardSheet);  // Assuming you have a clearSheet function defined
+			}
+		}
 
-	for(int i =0 ; i< m_totalProjectNum;i ++)
-	{
-		/*PROJECT* pProject; 
-		pProject = m_pProjects+i;
-		ulTemp = fwrite(pProject, sizeof(PROJECT), 1, fp);
-		ulWritten += ulTemp;*/
+		if (!projectSheet) {
+			projectSheet = book->addSheet(L"project");
+		}
+
+		if (!dashboardSheet) {
+			dashboardSheet = book->addSheet(L"dashboard");
+		}
+	}
+	else {
+		// File does not exist, create new file with sheets
+		projectSheet = book->addSheet(L"project");  // Add and assign the 'project' sheet
+		dashboardSheet = book->addSheet(L"dashboard");  // Add and assign the 'dashboard' sheet
 	}
 
+	write_global_env(book, projectSheet,&m_GlobalEnv);
+	write_project_header(book, projectSheet);
+
+	for (int i = 0; i < m_totalProjectNum; i++) {
+		write_project_body(book, projectSheet, &(m_pProjects[0][i]));  // Assuming write_project_body is defined
+	}
+
+	// Save and release
+	book->save(filename);
+	book->release();
 }
 
 void CCreator::PrintProjectInfo() {
 
 	Book* book = xlCreateXMLBook();  // Use xlCreateBook() for xls format	
 
-	// 정품 키 값이 들어 있다. 공개하는 프로젝트에는 포함되어 있지 않다. 
-	// 정품 키가 없으면 읽기가 300 컬럼으로 제한된다.
+	// 정품 키 값이 들어 있다. 공개하는 프로젝트 소스코드에는 포함되어 있지 않다. 
+	// 정품 키가 없으면 읽기가 300 컬럼으로 제한된다. 필요시 구매해서 사용 바람.
 	#ifdef INCLUDE_LIBXL_KET
 		book->setKey(_LIBXL_NAME, _LIBXL_KEY);
 	#endif
-
 
 	Sheet* projectSheet = nullptr;
 	Sheet* dashboardSheet = nullptr;
 
 	if (book->load(L"d:/new.xlsx")) {
 		// File exists, check for specific sheets
-		
 
 		for (int i = 0; i < book->sheetCount(); ++i) {
 			Sheet* sheet = book->getSheet(i);
@@ -687,133 +683,8 @@ void CCreator::PrintProjectInfo() {
 	for (int i = 0; i < m_totalProjectNum; i++) {
 		write_project_body(book, projectSheet, &(m_pProjects[0][i]));  // Assuming write_project_body is defined
 	}
-	
 
 	// Save and release
 	book->save(L"d:/new.xlsx");
 	book->release();
 }
-
-//
-//void CCreator::PrintProjectInfo() {
-//	xlnt::workbook wb;
-//	std::string file_path = "d:/new.xlsx";
-//
-//	xlnt::worksheet ws_project;
-//	xlnt::worksheet ws_dashboard;
-//
-//	// 파일이 존재하는지 확인
-//	if (file_exists(file_path)) {
-//		// 기존 파일을 로드
-//		wb.load(file_path);
-//
-//		// project 시트 확인 및 지우기
-//		if (wb.contains("project")) {
-//			ws_project = wb.sheet_by_title("project");
-//			clear_sheet(ws_project);  // 기존 내용 지우기
-//		}
-//		else {
-//			// project 시트가 없으면 새로 생성
-//			ws_project = wb.create_sheet();
-//			ws_project.title("project");
-//		}
-//
-//		// dashboard 시트 확인 및 지우기
-//		if (wb.contains("dashboard")) {
-//			ws_dashboard = wb.sheet_by_title("dashboard");
-//			clear_sheet(ws_dashboard);  // 기존 내용 지우기
-//		}
-//		else {
-//			// dashboard 시트가 없으면 새로 생성
-//			ws_dashboard = wb.create_sheet();
-//			ws_dashboard.title("dashboard");
-//		}
-//
-//		// 지운 후 저장
-//		save_workbook_with_unique_name(wb, file_path);
-//	}
-//	else {
-//		// 파일이 없으면 새 워크북 생성 및 시트 추가
-//		ws_project = wb.create_sheet();
-//		ws_project.title("project");
-//
-//		ws_dashboard = wb.create_sheet();
-//		ws_dashboard.title("dashboard");
-//
-//		// 워크북을 바로 저장
-//		save_workbook_with_unique_name(wb, file_path);
-//	}
-//
-//	// 저장 후 파일을 다시 로드
-//	wb.load(file_path);
-//
-//	// 데이터 기록
-//	ws_project = wb.sheet_by_title("project");
-//	write_project_header(ws_project);
-//	write_project_body(ws_project, &(m_pProjects[0][0]));  // 프로젝트 데이터 기록
-//
-//	// dashboard 시트에 데이터 기록 (예시)
-//	ws_dashboard = wb.sheet_by_title("dashboard");
-//	ws_dashboard.cell("A1").value("Dashboard Data");
-//	ws_dashboard.cell("A2").value(1234);
-//
-//	// 최종 저장 (필요 시 이름을 변경하면서)
-//	save_workbook_with_unique_name(wb, file_path);
-//}
-
-//void CCreator::PrintProjectInfo()
-//{
-//	xlnt::workbook wb;
-//	std::string file_path = "d:/new.xlsx";
-//
-//	xlnt::worksheet ws_project;
-//	xlnt::worksheet ws_dashboard;
-//
-//	// 파일이 존재하는지 확인
-//	if (std::filesystem::exists(file_path)) {
-//		// 기존 파일을 로드
-//		wb.load(file_path);
-//
-//		// project 시트 확인 및 지우기
-//		if (wb.contains("project")) {
-//			ws_project = wb.sheet_by_title("project");
-//			clear_sheet(ws_project);  // 기존 내용 지우기
-//		}
-//		else {
-//			// project 시트가 없으면 새로 생성
-//			ws_project = wb.create_sheet();
-//			ws_project.title("project");  // 시트의 이름을 설정
-//		}
-//
-//		// dashboard 시트 확인 및 지우기
-//		if (wb.contains("dashboard")) {
-//			ws_dashboard = wb.sheet_by_title("dashboard");
-//			clear_sheet(ws_dashboard);  // 기존 내용 지우기
-//		}
-//		else {
-//			// dashboard 시트가 없으면 새로 생성
-//			ws_dashboard = wb.create_sheet();
-//			ws_dashboard.title("dashboard");  // 시트의 이름을 설정
-//		}
-//	}
-//	else {
-//		// 파일이 없으면 새 워크북 생성 및 시트 추가
-//		ws_project = wb.create_sheet();  // 시트를 인덱스 기반으로 생성
-//		ws_project.title("project");  // 시트의 이름을 설정
-//
-//		ws_dashboard = wb.create_sheet();  // 시트를 인덱스 기반으로 생성
-//		ws_dashboard.title("dashboard");  // 시트의 이름을 설정
-//	}
-//
-//	save_workbook_with_unique_name(wb, file_path);
-//
-//	// 데이터 기록
-//	write_project_header(ws_project);
-//	write_project_body(ws_project, &(m_pProjects[0][0]));
-//
-//	ws_dashboard.cell("A1").value("Dashboard Data");
-//	ws_dashboard.cell("A2").value(1234);
-//
-//	// 파일을 저장 (필요 시 이름을 변경하면서)
-//	save_workbook_with_unique_name(wb, file_path);
-//}

@@ -111,23 +111,26 @@ void write_project_header(Book* book, Sheet* sheet) {
 		 L"mon_cf1", L"mon_cf2", L"mon_cf3", L"", L"prjType", L"actType"}
 	};
 
+	int posY = 4; //엑셀의 5번 행 부터기록
+	
 	// Write data to the first and second row
-	for (int row = 0; row < 2; ++row) {
+	for (int row = posY; row < posY+2; ++row) {
 		for (int col = 0; col < 16; ++col) {
-			sheet->writeStr(row , col, titles[row][col]);
+			sheet->writeStr(row , col, titles[row- posY][col]);
 		}
 	}
 
-	// Define and apply styles
 	Format* format = book->addFormat();
 	format->setBorder(BorderStyle::BORDERSTYLE_THIN);
 	format->setBorderColor(COLOR_BLACK);
 
 	// Apply format to cells (assuming you want to apply to 1st row as an example)
 	for (int col = 0; col < 16; ++col) {
-		sheet->setCellFormat(0, col, format);
-		sheet->setCellFormat(1, col, format);
+		sheet->setCellFormat(posY,	col, format);
+		sheet->setCellFormat(posY+1, col, format);
 	}
+
+
 }
 
 
@@ -139,7 +142,7 @@ void write_project_body(Book* book, Sheet* sheet, PROJECT* pProject) {
 
 	// Adjust position for 0-based indexing
 	posX = 0;  // Start at the first column (0-based)
-	posY = (pProject->ID * (iHeight+1)) + 3;  // Adjust for 0-based index
+	posY = (pProject->ID * (iHeight+1)) + 7;  // Adjust for 0-based index
 
 	draw_outer_border(book, sheet, posY, 0, posY + iHeight-1, iWidth, BORDERSTYLE_THIN, COLOR_BLACK);
 
@@ -197,43 +200,174 @@ void write_project_body(Book* book, Sheet* sheet, PROJECT* pProject) {
 		posY++;  // Move to next row for each activity
 	}
 }
+void draw_outer_border(Book* book, Sheet* sheet, int startRow, int startCol, int endRow, int endCol, BorderStyle borderStyle, Color borderColor)
+{
+	if (!book || !sheet || startRow > endRow || startCol > endCol)
+		return;
 
-void draw_outer_border(Book* book, Sheet* sheet, int startRow, int startCol, int endRow, int endCol, BorderStyle borderStyle, Color borderColor) {
-	if (!book || !sheet) return;
+	// 각 면과 모서리의 테두리를 위한 포맷 생성
+	Format* topFormat = book->addFormat();
+	Format* bottomFormat = book->addFormat();
+	Format* leftFormat = book->addFormat();
+	Format* rightFormat = book->addFormat();
+	Format* topLeftFormat = book->addFormat();
+	Format* topRightFormat = book->addFormat();
+	Format* bottomLeftFormat = book->addFormat();
+	Format* bottomRightFormat = book->addFormat();
 
-	// Apply the top border format to the top edge of the specified range
-	//for (int col = startCol; col <= endCol; col++) {
-	//	Format* newFormat = book->addFormat(); // Create a fresh format
-	//	newFormat->setBorderTop(borderStyle);
-	//	newFormat->setBorderColor(borderColor);
-	//	sheet->setCellFormat(startRow, col, newFormat);
-	//}
+	// 내부 테두리를 지우기 위한 포맷 생성
+	Format* clearFormat = book->addFormat();
+	clearFormat->setBorder(BORDERSTYLE_NONE);
 
-	//// Apply the left border format to the left edge of the specified range
-	//for (int row = startRow; row <= endRow; row++) {
-	//	Format* newFormat = book->addFormat(); // Create a fresh format
-	//	newFormat->setBorderLeft(borderStyle);
-	//	newFormat->setBorderColor(borderColor);
-	//	sheet->setCellFormat(row, startCol, newFormat);
-	//}
+	// 테두리 스타일과 색상 설정
+	topFormat->setBorderTop(borderStyle);
+	bottomFormat->setBorderBottom(borderStyle);
+	leftFormat->setBorderLeft(borderStyle);
+	rightFormat->setBorderRight(borderStyle);
+	topFormat->setBorderTopColor(borderColor);
+	bottomFormat->setBorderBottomColor(borderColor);
+	leftFormat->setBorderLeftColor(borderColor);
+	rightFormat->setBorderRightColor(borderColor);
 
-	//// Apply the right border format to the right edge of the specified range
-	//for (int row = startRow; row <= endRow; row++) {
-	//	Format* newFormat = book->addFormat(); // Create a fresh format
-	//	newFormat->setBorderRight(borderStyle);
-	//	newFormat->setBorderColor(borderColor);
-	//	sheet->setCellFormat(row, endCol, newFormat);
-	//}
+	// 모서리 포맷 설정
+	topLeftFormat->setBorderTop(borderStyle);
+	topLeftFormat->setBorderLeft(borderStyle);
+	topLeftFormat->setBorderTopColor(borderColor);
+	topLeftFormat->setBorderLeftColor(borderColor);
 
-	// Apply the bottom border format to the bottom edge of the specified range
-	//for (int col = startCol; col <= endCol; col++) {
-	//	Format* newFormat = book->addFormat(); // Create a fresh format
-	//	newFormat->setBorderBottom(borderStyle);
-	//	newFormat->setBorderColor(borderColor);
-	//	sheet->setCellFormat(endRow, col, newFormat);
-	//}
+	topRightFormat->setBorderTop(borderStyle);
+	topRightFormat->setBorderRight(borderStyle);
+	topRightFormat->setBorderTopColor(borderColor);
+	topRightFormat->setBorderRightColor(borderColor);
+
+	bottomLeftFormat->setBorderBottom(borderStyle);
+	bottomLeftFormat->setBorderLeft(borderStyle);
+	bottomLeftFormat->setBorderBottomColor(borderColor);
+	bottomLeftFormat->setBorderLeftColor(borderColor);
+
+	bottomRightFormat->setBorderBottom(borderStyle);
+	bottomRightFormat->setBorderRight(borderStyle);
+	bottomRightFormat->setBorderBottomColor(borderColor);
+	bottomRightFormat->setBorderRightColor(borderColor);
+
+	// 위쪽 테두리 (모서리 제외)
+	for (int col = startCol + 1; col < endCol; ++col)
+	{
+		Format* cellFormat = sheet->cellFormat(startRow, col);
+		if (cellFormat) topFormat->setFont(cellFormat->font());
+		sheet->setCellFormat(startRow, col, topFormat);
+	}
+
+	// 아래쪽 테두리 (모서리 제외)
+	for (int col = startCol + 1; col < endCol; ++col)
+	{
+		Format* cellFormat = sheet->cellFormat(endRow, col);
+		if (cellFormat) bottomFormat->setFont(cellFormat->font());
+		sheet->setCellFormat(endRow, col, bottomFormat);
+	}
+
+	// 왼쪽 테두리 (모서리 제외)
+	for (int row = startRow + 1; row < endRow; ++row)
+	{
+		Format* cellFormat = sheet->cellFormat(row, startCol);
+		if (cellFormat) leftFormat->setFont(cellFormat->font());
+		sheet->setCellFormat(row, startCol, leftFormat);
+	}
+
+	// 오른쪽 테두리 (모서리 제외)
+	for (int row = startRow + 1; row < endRow; ++row)
+	{
+		Format* cellFormat = sheet->cellFormat(row, endCol);
+		if (cellFormat) rightFormat->setFont(cellFormat->font());
+		sheet->setCellFormat(row, endCol, rightFormat);
+	}
+
+	// 모서리 셀 처리
+	Format* cellFormat;
+
+	// 왼쪽 위 모서리
+	cellFormat = sheet->cellFormat(startRow, startCol);
+	if (cellFormat) topLeftFormat->setFont(cellFormat->font());
+	sheet->setCellFormat(startRow, startCol, topLeftFormat);
+
+	// 오른쪽 위 모서리
+	cellFormat = sheet->cellFormat(startRow, endCol);
+	if (cellFormat) topRightFormat->setFont(cellFormat->font());
+	sheet->setCellFormat(startRow, endCol, topRightFormat);
+
+	// 왼쪽 아래 모서리
+	cellFormat = sheet->cellFormat(endRow, startCol);
+	if (cellFormat) bottomLeftFormat->setFont(cellFormat->font());
+	sheet->setCellFormat(endRow, startCol, bottomLeftFormat);
+
+	// 오른쪽 아래 모서리
+	cellFormat = sheet->cellFormat(endRow, endCol);
+	if (cellFormat) bottomRightFormat->setFont(cellFormat->font());
+	sheet->setCellFormat(endRow, endCol, bottomRightFormat);
+
+	// 내부 테두리 지우기
+	for (int row = startRow + 1; row < endRow; ++row)
+	{
+		for (int col = startCol + 1; col < endCol; ++col)
+		{
+			cellFormat = sheet->cellFormat(row, col);
+			if (cellFormat)
+			{
+				clearFormat->setFont(cellFormat->font());
+				sheet->setCellFormat(row, col, clearFormat);
+			}
+		}
+	}
 }
 
+void write_global_env(Book* book, Sheet* sheet, GLOBAL_ENV* pGlobalEnv) {
+	
+	int posX = 0, posY = 0;// Adjust position for 0-based indexing
+
+	//draw_outer_border(book, sheet, posY, 0, posY + iHeight - 1, iWidth, BORDERSTYLE_THIN, COLOR_BLACK);
+
+	// First row settings
+	sheet->writeStr(1, 0, L"GlobalEnv");
+	
+	posY = 2;
+	sheet->writeStr(posY, posX++, L"SimulationWeeks");
+	sheet->writeNum(posY, posX++, pGlobalEnv->SimulationWeeks);
+	sheet->writeStr(posY, posX++, L"maxWeek");
+	sheet->writeNum(posY, posX++, pGlobalEnv->maxWeek);
+	sheet->writeStr(posY, posX++, L"WeeklyProb");
+	sheet->writeNum(posY, posX++, pGlobalEnv->WeeklyProb);
+	sheet->writeStr(posY, posX++, L"Hr_Init_H");
+	sheet->writeNum(posY, posX++, pGlobalEnv->Hr_Init_H);
+	sheet->writeStr(posY, posX++, L"Hr_Init_M");
+	sheet->writeNum(posY, posX++, pGlobalEnv->Hr_Init_M);
+	sheet->writeStr(posY, posX++, L"Hr_Init_L");
+	sheet->writeNum(posY, posX++, pGlobalEnv->Hr_Init_L);
+	sheet->writeStr(posY, posX++, L"Hr_LeadTime");
+	sheet->writeNum(posY, posX++, pGlobalEnv->Hr_LeadTime);
+	sheet->writeStr(posY, posX++, L"Cash_Init");
+	sheet->writeNum(posY, posX++, pGlobalEnv->Cash_Init);
+	sheet->writeStr(posY, posX++, L"ProblemCnt");
+	sheet->writeNum(posY, posX++, pGlobalEnv->ProblemCnt);
+	sheet->writeStr(posY, posX++, L"ExpenseRate");
+	sheet->writeNum(posY, posX++, pGlobalEnv->ExpenseRate);
+	sheet->writeStr(posY, posX++, L"selectOrder");
+	sheet->writeNum(posY, posX++, pGlobalEnv->selectOrder);
+	sheet->writeStr(posY, posX++, L"recruit");
+	sheet->writeNum(posY, posX++, pGlobalEnv->recruit);
+	sheet->writeStr(posY, posX++, L"layoff");
+	sheet->writeNum(posY, posX++, pGlobalEnv->layoff);
+
+	// Define and apply styles
+	Format* format = book->addFormat();
+	format->setBorder(BorderStyle::BORDERSTYLE_THIN);
+	format->setBorderColor(COLOR_BLACK);
+
+	// Apply format to cells (assuming you want to apply to 1st row as an example)
+	for (int col = 0; col < posX; ++col) {
+		sheet->setCellFormat(2, col , format);
+	}
+	
+}
 
 //void write_project_body(xlnt::worksheet& ws, PROJECT* pProject)
 //{

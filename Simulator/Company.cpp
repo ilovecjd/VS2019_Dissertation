@@ -519,6 +519,7 @@ void sortArrayDescending(int* indexArray, int* valueArray, int size) {
 		}
 	}
 }
+
 void CCompany::SelectNewProject(int thisWeek)
 {	
 	
@@ -805,6 +806,7 @@ void CCompany::write_CompanyInfo(Book* book, Sheet* sheet)
 		sheet->writeNum(index++, col + 1, m_totalHR[HR_MID][col]);
 		sheet->writeNum(index++, col + 1, m_totalHR[HR_LOW][col]);
 	}
+
 
 
 
