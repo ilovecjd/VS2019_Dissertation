@@ -33,24 +33,52 @@ void CCompany::ClearMemory()
 
 BOOL CCompany::Init(CString fileName)
 {
-	FILE* fp = nullptr;
-	if (!OpenFile(fileName, _T("rb"), &fp)) return FALSE;
+	Book* book = xlCreateXMLBook();  // Use xlCreateBook() for xls format	
 
-	SAVE_SIG sig;
-	if (fread(&sig, 1, sizeof(sig), fp) != sizeof(sig)) {
-		perror("Failed to read signature");
-		CloseFile(&fp);
+	// 정품 키 값이 들어 있다. 공개하는 프로젝트에는 포함되어 있지 않다. 
+	// 정품 키가 없으면 읽기가 300 컬럼으로 제한된다.
+#ifdef INCLUDE_LIBXL_KET
+	book->setKey(_LIBXL_NAME, _LIBXL_KEY);
+#endif
+
+	Sheet* projectSheet = nullptr;
+
+	if (book->load(fileName)) {
+		// File exists, check for specific sheets
+		for (int i = 0; i < book->sheetCount(); ++i) {
+			Sheet* sheet = book->getSheet(i);
+			if (std::wcscmp(sheet->name(), L"project") == 0) {
+				projectSheet = sheet;				
+			}
+		}
+
+		if (!projectSheet) {
+			AfxMessageBox(_T("Sheet does not exist"), MB_OK | MB_ICONERROR);
+			return FALSE;
+		}
+
+	}
+	else {
+		// File does not exist, create new file with sheets
+		AfxMessageBox(_T("File does not exist"), MB_OK | MB_ICONERROR);
 		return FALSE;
 	}
 
-	ReadDataWithHeader(fp, &m_GlobalEnv, sizeof(GLOBAL_ENV), TYPE_ENVIRONMENT);
-	ReadDataWithHeader(fp, &m_ActType, sizeof(ALL_ACT_TYPE), TYPE_ACTIVITY);
-	ReadDataWithHeader(fp, &m_ActPattern, sizeof(ALL_ACTIVITY_PATTERN), TYPE_PATTERN);
+	read_global_env(book, projectSheet, &m_GlobalEnv);
+	
+	m_totalProjectNum = projectSheet->readNum(1, 3 );
 
-	ReadOrder(fp);
-	ReadProject(fp);
+	m_AllProjects = new PROJECT[m_totalProjectNum];
+	memset(m_AllProjects, 0xcc, sizeof(PROJECT) * m_totalProjectNum);
+	for (int i =0 ; i< m_totalProjectNum; i++)
+	{
+		read_project_body(book, projectSheet, m_AllProjects+i, i);
+	}
+	
+	book->release();
+	
 
-	CloseFile(&fp);
+	//MakeOrderTable(fp);
 
 	m_doingHR.Resize(3,m_GlobalEnv.maxWeek);
 	m_freeHR.Resize(3, m_GlobalEnv.maxWeek);
@@ -63,9 +91,6 @@ BOOL CCompany::Init(CString fileName)
 	m_incomeTable.Resize(1, m_GlobalEnv.maxWeek);
 	m_expensesTable.Resize(1, m_GlobalEnv.maxWeek);
 	
-	int duration = 40;
-	int startDate = 0;
-
 	return TRUE;
 }
 
@@ -84,6 +109,7 @@ void CCompany::ReInit()
 	m_incomeTable.Resize(1, m_GlobalEnv.maxWeek);
 	m_expensesTable.Resize(1, m_GlobalEnv.maxWeek);
 
+	//song!!! loop 돌면서 전체 0 으로 만들고 시작
 	// 이건 충원이나 감원쪽에서 필요시 다시 수정하게 된다.	
 	m_totalHR[HR_HIG][0] = m_freeHR[HR_HIG][0] = m_GlobalEnv.Hr_Init_H;
 	m_totalHR[HR_MID][0] = m_freeHR[HR_MID][0] = m_GlobalEnv.Hr_Init_M;

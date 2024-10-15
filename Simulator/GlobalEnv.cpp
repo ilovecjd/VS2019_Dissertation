@@ -129,8 +129,6 @@ void write_project_header(Book* book, Sheet* sheet) {
 		sheet->setCellFormat(posY,	col, format);
 		sheet->setCellFormat(posY+1, col, format);
 	}
-
-
 }
 
 
@@ -200,6 +198,72 @@ void write_project_body(Book* book, Sheet* sheet, PROJECT* pProject) {
 		posY++;  // Move to next row for each activity
 	}
 }
+
+
+void read_project_body(Book* book, Sheet* sheet, PROJECT* pProject, int projectIndex) {
+	const int iWidth = 15;
+	const int iHeight = 5;
+
+	int posX, posY;
+
+	posX = 0;
+	posY = (projectIndex * (iHeight + 1)) + 7;
+
+	// First row readings
+	pProject->category = sheet->readNum(posY, posX++);
+	pProject->ID = sheet->readNum(posY, posX++);
+	pProject->duration = sheet->readNum(posY, posX++);
+	pProject->startAvail = sheet->readNum(posY, posX++);
+	pProject->endDate = sheet->readNum(posY, posX++);
+	pProject->orderDate = sheet->readNum(posY, posX++);
+	pProject->profit = sheet->readNum(posY, posX++);
+	pProject->experience = sheet->readNum(posY, posX++);
+	pProject->winProb = sheet->readNum(posY, posX++);
+
+	pProject->nCashFlows = sheet->readNum(posY, posX++);
+	pProject->cashFlows[0] = sheet->readNum(posY, posX++);
+	pProject->cashFlows[1] = sheet->readNum(posY, posX++);
+	pProject->cashFlows[2] = sheet->readNum(posY, posX++);
+
+	pProject->firstPay = sheet->readNum(posY, posX++);
+	pProject->secondPay = sheet->readNum(posY, posX++);
+	pProject->finalPay = sheet->readNum(posY, posX++);
+
+	// Second row readings
+	posY++;  //주의!!!
+	posX = 0;
+	pProject->numActivities = sheet->readNum(posY, posX++);
+
+	posX = 10;
+	pProject->firstPayMonth = sheet->readNum(posY, posX++);
+	pProject->secondPayMonth = sheet->readNum(posY, posX++);
+	pProject->finalPayMonth = sheet->readNum(posY, posX++);
+
+	posX = 14;
+	pProject->projectType = sheet->readNum(posY, posX++);
+	pProject->activityPattern = sheet->readNum(posY, posX++);
+
+	// Activity data readings
+	for (int i = 0; i < pProject->numActivities; ++i) {		
+		posX = 1;
+
+		// Skip activity name
+		posX++;
+
+		pProject->activities[i].duration = sheet->readNum(posY, posX++);
+		pProject->activities[i].startDate = sheet->readNum(posY, posX++);
+		pProject->activities[i].endDate = sheet->readNum(posY, posX++);
+
+		posX = 6;
+		pProject->activities[i].highSkill = sheet->readNum(posY, posX++);
+		pProject->activities[i].midSkill = sheet->readNum(posY, posX++);
+		pProject->activities[i].lowSkill = sheet->readNum(posY, posX++);
+
+		posY++;
+	}
+}
+
+
 void draw_outer_border(Book* book, Sheet* sheet, int startRow, int startCol, int endRow, int endCol, BorderStyle borderStyle, Color borderColor)
 {
 	if (!book || !sheet || startRow > endRow || startCol > endCol)
@@ -366,7 +430,28 @@ void write_global_env(Book* book, Sheet* sheet, GLOBAL_ENV* pGlobalEnv) {
 	for (int col = 0; col < posX; ++col) {
 		sheet->setCellFormat(2, col , format);
 	}
-	
+}
+
+void read_global_env(Book* book, Sheet* sheet, GLOBAL_ENV* pGlobalEnv) {
+	if (!book || !sheet || !pGlobalEnv) return;
+
+	int posX = 1;  // Start from the second column (because column 0 contains the field names)
+	int posY = 2;  // Start from the row where the data starts (row 2)
+
+	// Read the values and populate the structure
+	pGlobalEnv->SimulationWeeks = static_cast<int>(sheet->readNum(posY, posX++));
+	pGlobalEnv->maxWeek = static_cast<int>(sheet->readNum(posY, posX++));
+	pGlobalEnv->WeeklyProb = sheet->readNum(posY, posX++);
+	pGlobalEnv->Hr_Init_H = static_cast<int>(sheet->readNum(posY, posX++));
+	pGlobalEnv->Hr_Init_M = static_cast<int>(sheet->readNum(posY, posX++));
+	pGlobalEnv->Hr_Init_L = static_cast<int>(sheet->readNum(posY, posX++));
+	pGlobalEnv->Hr_LeadTime = static_cast<int>(sheet->readNum(posY, posX++));
+	pGlobalEnv->Cash_Init = static_cast<int>(sheet->readNum(posY, posX++));
+	pGlobalEnv->ProblemCnt = static_cast<int>(sheet->readNum(posY, posX++));
+	pGlobalEnv->ExpenseRate = sheet->readNum(posY, posX++);
+	pGlobalEnv->selectOrder = static_cast<int>(sheet->readNum(posY, posX++));
+	pGlobalEnv->recruit = static_cast<int>(sheet->readNum(posY, posX++));
+	pGlobalEnv->layoff = static_cast<int>(sheet->readNum(posY, posX++));
 }
 
 //void write_project_body(xlnt::worksheet& ws, PROJECT* pProject)

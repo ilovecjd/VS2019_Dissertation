@@ -624,12 +624,16 @@ void CCreator::Save(CString filename)
 		dashboardSheet = book->addSheet(L"dashboard");  // Add and assign the 'dashboard' sheet
 	}
 
+
 	write_global_env(book, projectSheet,&m_GlobalEnv);
 	write_project_header(book, projectSheet);
 
 	for (int i = 0; i < m_totalProjectNum; i++) {
 		write_project_body(book, projectSheet, &(m_pProjects[0][i]));  // Assuming write_project_body is defined
 	}
+
+	projectSheet->writeStr(1, 2, L"TatalPrjNum");
+	projectSheet->writeNum(1, 3, m_totalProjectNum);
 
 	// Save and release
 	book->save(filename);

@@ -64,8 +64,9 @@ CSimulatorDlg::CSimulatorDlg(CWnd* pParent /*=nullptr*/)
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 	m_pAutoProxy = nullptr;
 
-	//song 
-	m_pGlobalEnv = new GLOBAL_ENV;
+	//song !!!
+	m_pGlobalEnv = new GLOBAL_ENV; //song delete는 소멸자에서
+	
 }
 
 CSimulatorDlg::~CSimulatorDlg()
@@ -283,7 +284,16 @@ void CSimulatorDlg::OnBnClickedCreateProject()
 	CString strFileName = _T("d:/test/test.xlsx");
 	Creator.Save(strFileName);
 	//Creator.PrintProjectInfo();
-	
+
+	CCompany* company = new CCompany;
+	company->Init(strFileName);
+	//company->ReInit();
+
+
+	delete actTemp;
+	delete patternTemp;
+	delete company;
+
 	return ;
 }
 

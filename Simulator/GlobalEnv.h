@@ -339,3 +339,5 @@ void write_project_header(Book* book, Sheet* sheet);
 void write_project_body(Book* book, Sheet* sheet, PROJECT* pProject);
 void draw_outer_border(Book* book, Sheet* sheet, int startRow, int startCol, int endRow, int endCol, BorderStyle borderStyle, Color borderColor);
 void write_global_env(Book* book, Sheet* sheet, GLOBAL_ENV* pGlobalEnv);
+void read_global_env(Book* book, Sheet* sheet, GLOBAL_ENV* pGlobalEnv);
+void read_project_body(Book* book, Sheet* sheet, PROJECT* pProject, int projectIndex);
