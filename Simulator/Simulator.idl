@@ -1,0 +1,29 @@
+﻿// Simulator.idl: Simulator.exe의 형식 라이브러리 소스
+
+// 이 파일은 MIDL 컴파일러에 의해 처리되어
+// 형식 라이브러리(Simulator.tlb)입니다.
+
+[ uuid(fe8fc0c6-35a2-4948-9ded-22515c416ba1), version(1.0) ]
+library Simulator
+{
+	importlib("stdole32.tlb");
+	importlib("stdole2.tlb");
+
+	//  CSimulatorDoc의 기본 디스패치 인터페이스
+
+	[ uuid(7a36e8b6-03f2-4059-9cc1-3e7ff6a912c3) ]
+	dispinterface ISimulator
+	{
+		properties:
+
+		methods:
+	};
+
+	//  CSimulatorDoc에 대한 클래스 정보
+
+	[ uuid(db374100-169a-4389-b9b4-c6ab5e02548b) ]
+	coclass Simulator
+	{
+		[default] dispinterface ISimulator;
+	};
+};
