@@ -384,6 +384,40 @@ void draw_outer_border(Book* book, Sheet* sheet, int startRow, int startCol, int
 	}
 }
 
+void draw_all_borders(Book* book, Sheet* sheet, int startRow, int startCol, int endRow, int endCol, BorderStyle borderStyle, Color borderColor)
+{
+	if (!book || !sheet || startRow > endRow || startCol > endCol)
+		return;  // 유효성 검사
+
+	Format* format = book->addFormat();
+	format->setBorder(borderStyle);
+	format->setBorderColor(borderColor);
+
+	for (int row = startRow; row <= endRow; ++row)
+	{
+		for (int col = startCol; col <= endCol; ++col)
+		{
+			// 기존 셀의 포맷을 가져옵니다.
+			Format* cellFormat = sheet->cellFormat(row, col);
+			if (!cellFormat)
+			{
+				cellFormat = book->addFormat();
+			}
+			else
+			{
+				// 기존 포맷을 복사하여 새 포맷을 만듭니다.
+				cellFormat = book->addFormat(cellFormat);
+			}
+
+			// 테두리 스타일을 설정합니다.
+			cellFormat->setBorder(BORDERSTYLE_THIN);  // 모든 방향의 테두리를 설정
+			cellFormat->setBorderColor(borderColor);
+
+			// 수정된 포맷을 셀에 적용합니다.
+			sheet->setCellFormat(row, col, cellFormat);
+		}
+	}
+}
 void write_global_env(Book* book, Sheet* sheet, GLOBAL_ENV* pGlobalEnv) {
 	
 	int posX = 0, posY = 0;// Adjust position for 0-based indexing

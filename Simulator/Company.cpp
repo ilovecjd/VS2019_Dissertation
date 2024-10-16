@@ -77,7 +77,6 @@ BOOL CCompany::Init(CString fileName)
 	
 	book->release();
 	
-
 	//MakeOrderTable(fp);
 
 	m_doingHR.Resize(3,m_GlobalEnv.maxWeek);
@@ -109,8 +108,17 @@ void CCompany::ReInit()
 	m_incomeTable.Resize(1, m_GlobalEnv.maxWeek);
 	m_expensesTable.Resize(1, m_GlobalEnv.maxWeek);
 
-	//song!!! loop 돌면서 전체 0 으로 만들고 시작
-	// 이건 충원이나 감원쪽에서 필요시 다시 수정하게 된다.	
+	m_doingHR.Clear();
+	m_totalHR.Clear();
+	m_freeHR.Clear();	
+	
+	m_doingTable.Clear();
+	m_doneTable.Clear();
+	m_defferTable.Clear();
+
+	m_incomeTable.Clear();
+	m_expensesTable.Clear();
+
 	m_totalHR[HR_HIG][0] = m_freeHR[HR_HIG][0] = m_GlobalEnv.Hr_Init_H;
 	m_totalHR[HR_MID][0] = m_freeHR[HR_MID][0] = m_GlobalEnv.Hr_Init_M;
 	m_totalHR[HR_LOW][0] = m_freeHR[HR_LOW][0] = m_GlobalEnv.Hr_Init_L;
