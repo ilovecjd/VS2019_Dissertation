@@ -33,13 +33,8 @@ public:
 private:
 	// 초기화 필요한 변수들
 	int m_totalProjectNum;
-	
-	//ALL_ACT_TYPE	m_ActType;
-	//ALL_ACTIVITY_PATTERN m_ActPattern;
 
 	PROJECT* m_AllProjects = NULL;	
-	PROJECT m_InterProjects[3] = {0,};  //내부프로젝트
-	
 
 	int* m_orderTable[2] = {NULL,NULL};
 
