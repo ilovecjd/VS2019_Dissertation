@@ -69,7 +69,7 @@ BOOL CCompany::Init(CString fileName)
 	m_totalProjectNum = projectSheet->readNum(1, 3 );
 
 	m_AllProjects = new PROJECT[m_totalProjectNum];
-	memset(m_AllProjects, 0xcc, sizeof(PROJECT) * m_totalProjectNum);
+	memset(m_AllProjects, 0, sizeof(PROJECT) * m_totalProjectNum);
 	for (int i =0 ; i< m_totalProjectNum; i++)
 	{
 		read_project_body(book, projectSheet, m_AllProjects+i, i);
@@ -79,21 +79,12 @@ BOOL CCompany::Init(CString fileName)
 	
 	//MakeOrderTable(fp);
 
-	m_doingHR.Resize(3,m_GlobalEnv.maxWeek);
-	m_freeHR.Resize(3, m_GlobalEnv.maxWeek);
-	m_totalHR.Resize(3, m_GlobalEnv.maxWeek);
-
-	m_doingTable.Resize(10, m_GlobalEnv.maxWeek);
-	m_doneTable.Resize(10, m_GlobalEnv.maxWeek);
-	m_defferTable.Resize(10, m_GlobalEnv.maxWeek);
-
-	m_incomeTable.Resize(1, m_GlobalEnv.maxWeek);
-	m_expensesTable.Resize(1, m_GlobalEnv.maxWeek);
+	TableInit();
 	
 	return TRUE;
 }
 
-void CCompany::ReInit()
+void CCompany::TableInit()
 {
 	//m_orderTable.Resize(2, nWeeks);
 

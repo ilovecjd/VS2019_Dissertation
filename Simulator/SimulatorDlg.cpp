@@ -328,7 +328,7 @@ void CSimulatorDlg::OnBnClickedSimulation()
 
 		CCompany* company = new CCompany;
 		company->Init(prarmFile);
-		company->ReInit();
+		//company->TableInit();
 
 		int k = 0;
 		while (k < m_pGlobalEnv->SimulationWeeks)

@@ -12,7 +12,7 @@ public:
 	CCompany();
 	~CCompany();
 	BOOL Init(CString fileName);
-	void ReInit();
+	void TableInit();
 	void ClearMemory();
 		
 	BOOL Decision(int thisWeek);
