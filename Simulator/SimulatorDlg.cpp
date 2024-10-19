@@ -279,15 +279,24 @@ void CSimulatorDlg::OnBnClickedCreateProject()
 	ALL_ACTIVITY_PATTERN* patternTemp = new ALL_ACTIVITY_PATTERN;
 	DefaultParameters(actTemp, patternTemp);
 
-	CCreator Creator; 
-	Creator.Init(m_pGlobalEnv, actTemp, patternTemp);
+	//CCreator Creator; 
+	//Creator.Init(m_pGlobalEnv, actTemp, patternTemp);
 	CString strFileName = _T("d:/test/test.xlsx");
-	Creator.Save(strFileName);
-	//Creator.PrintProjectInfo();
-
+	//Creator.Save(strFileName);
+	
 	CCompany* company = new CCompany;
 	company->Init(strFileName);
 	//company->ReInit();
+
+	int k = 0;
+	while (k < m_pGlobalEnv->SimulationWeeks)
+	{
+		if (FALSE == company->Decision(k))  // j번째 기간에 결정해야 할 일들		
+			k = 9999; //m_pGlobalEnv->SimulationWeeks + 1;
+
+		k++;
+	}
+	company->PrintCompanyResualt();
 
 
 	delete actTemp;

@@ -421,17 +421,19 @@ void CCompany::RemoveHR(int grade, int removeWeek)
 void CCompany::SelectCandidates(int thisWeek)
 {	
 	for (int i = 0; i< MAX_CANDIDATES; i++)
-		m_candidateTable[i] = 0;
+		m_candidateTable[i] = -1;
 
 	int j = 0;
 
 	for (int i = 0; i < m_totalProjectNum; i++)
 	{
 		PROJECT* project = m_AllProjects + i;
-		if((project->category == 1)) { //내부프로젝트
-			if (project->duration > project->runningWeeks) { // 완료되지 않은 내부프로젝트
-				if (IsInternalEnoughHR(thisWeek, project)) // 내부 프로젝트 인원 체크			
-					m_candidateTable[j++] = project->ID;
+		if ((project->category == 1)) { //내부프로젝트
+			if (project->orderDate <= thisWeek){ // 발주가 된것들중
+				if (project->duration > project->runningWeeks) { // 완료되지 않은 내부프로젝트
+					if (IsInternalEnoughHR(thisWeek, project)) // 내부 프로젝트 인원 체크			
+						m_candidateTable[j++] = project->ID;
+				}
 			}
 		}
 		else if(project->orderDate == thisWeek) // 이번주 발생 프로젝트

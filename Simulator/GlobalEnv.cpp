@@ -473,19 +473,19 @@ void read_global_env(Book* book, Sheet* sheet, GLOBAL_ENV* pGlobalEnv) {
 	int posY = 2;  // Start from the row where the data starts (row 2)
 
 	// Read the values and populate the structure
-	pGlobalEnv->SimulationWeeks = static_cast<int>(sheet->readNum(posY, posX++));
-	pGlobalEnv->maxWeek = static_cast<int>(sheet->readNum(posY, posX++));
-	pGlobalEnv->WeeklyProb = sheet->readNum(posY, posX++);
-	pGlobalEnv->Hr_Init_H = static_cast<int>(sheet->readNum(posY, posX++));
-	pGlobalEnv->Hr_Init_M = static_cast<int>(sheet->readNum(posY, posX++));
-	pGlobalEnv->Hr_Init_L = static_cast<int>(sheet->readNum(posY, posX++));
-	pGlobalEnv->Hr_LeadTime = static_cast<int>(sheet->readNum(posY, posX++));
-	pGlobalEnv->Cash_Init = static_cast<int>(sheet->readNum(posY, posX++));
-	pGlobalEnv->ProblemCnt = static_cast<int>(sheet->readNum(posY, posX++));
-	pGlobalEnv->ExpenseRate = sheet->readNum(posY, posX++);
-	pGlobalEnv->selectOrder = static_cast<int>(sheet->readNum(posY, posX++));
-	pGlobalEnv->recruit = static_cast<int>(sheet->readNum(posY, posX++));
-	pGlobalEnv->layoff = static_cast<int>(sheet->readNum(posY, posX++));
+	pGlobalEnv->SimulationWeeks	= sheet->readNum(posY, posX );
+	pGlobalEnv->maxWeek			= sheet->readNum(posY, posX += 2);
+	pGlobalEnv->WeeklyProb		= sheet->readNum(posY, posX += 2);
+	pGlobalEnv->Hr_Init_H		= sheet->readNum(posY, posX += 2);
+	pGlobalEnv->Hr_Init_M		= sheet->readNum(posY, posX += 2);
+	pGlobalEnv->Hr_Init_L		= sheet->readNum(posY, posX += 2);
+	pGlobalEnv->Hr_LeadTime		= sheet->readNum(posY, posX += 2);
+	pGlobalEnv->Cash_Init		= sheet->readNum(posY, posX += 2);
+	pGlobalEnv->ProblemCnt		= sheet->readNum(posY, posX += 2);
+	pGlobalEnv->ExpenseRate		= sheet->readNum(posY, posX += 2);
+	pGlobalEnv->selectOrder		= sheet->readNum(posY, posX += 2);
+	pGlobalEnv->recruit			= sheet->readNum(posY, posX += 2);
+	pGlobalEnv->layoff			= sheet->readNum(posY, posX += 2);
 }
 
 //void write_project_body(xlnt::worksheet& ws, PROJECT* pProject)

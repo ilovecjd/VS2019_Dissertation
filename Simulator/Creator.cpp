@@ -2,7 +2,7 @@
 #include "GlobalEnv.h"
 #include "Creator.h"
 #include <cctype>   // toupper 함수를 사용하기 위해 필요
-#include "hidden_libxl.h"
+
 
 
 

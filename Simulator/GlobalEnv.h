@@ -5,6 +5,7 @@
 #include <algorithm>
 
 #include "libxl.h"
+#include "hidden_libxl.h"
 using namespace libxl;
 
 #define MAX_CANDIDATES 50
