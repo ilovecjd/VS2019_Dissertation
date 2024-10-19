@@ -80,7 +80,7 @@ int CCreator::CreateInternalProject(int Id,int week)
 	Project.ID = Id;		// 프로젝트의 번호	
 	Project.orderDate = week;	// 발주일
 	Project.startAvail = week;  // 시작 가능일. 내부는 바로 진행가능
-	Project.isStart = 0;		// 진행 여부 (0: 미진행, 나머지: 진행시작한 주)
+	Project.runningWeeks = 0;		// 진행한 기간 (0: 미진행, 나머지: 진행한 기간)
 	Project.experience = ZeroOrOneByProb(95);	// 경험 (0: 무경험 1: 유경험)
 	Project.winProb = 100;		// 성공 확률 song ==> 추후 사용시 생성 방법을 결정한다. 현재는 100%
 	Project.nCashFlows = MAX_N_CF;	// 비용 지급 횟수(규모에 따라 변경 가능)
@@ -173,7 +173,7 @@ int CCreator::CraterExternalProject(int Id, int week)
 	Project.ID = Id;		// 프로젝트의 번호	
 	Project.orderDate = week;	// 발주일
 	Project.startAvail = week + (rand() % 4);  // // 시작 가능일 ( 0에서 3 사이의 정수 난수 생성)
-	Project.isStart = 0;		// 진행 여부 (0: 미진행, 나머지: 진행시작한 주)
+	Project.runningWeeks = 0;		// 진행 기간 (0: 미진행, 나머지: 진행한 기간)
 	Project.experience = ZeroOrOneByProb(95);	// 경험 (0: 무경험 1: 유경험)
 	Project.winProb = 100;		// 성공 확률 song ==> 추후 사용시 생성 방법을 결정한다. 현재는 100%
 	Project.nCashFlows = MAX_N_CF;	// 비용 지급 횟수(규모에 따라 변경 가능)
@@ -236,7 +236,7 @@ int CCreator::CreateProjects()
 		//		pProject->ID = projectId;		// 프로젝트의 번호	
 		//		pProject->orderDate = week;	// 발주일
 		//		pProject->startAvail = week  + (rand() % 4);  // // 시작 가능일 ( 0에서 3 사이의 정수 난수 생성)
-		//		pProject->isStart = 0;		// 진행 여부 (0: 미진행, 나머지: 진행시작한 주)
+		//		pProject->runningWeeks = 0;		// 진행 여부 (0: 미진행, 나머지: 진행시작한 주)
 		//		pProject->experience = ZeroOrOneByProb(95);	// 경험 (0: 무경험 1: 유경험)
 		//		pProject->winProb = 100;		// 성공 확률 song ==> 추후 사용시 생성 방법을 결정한다. 현재는 100%
 		//		pProject->nCashFlows = MAX_N_CF;	// 비용 지급 횟수(규모에 따라 변경 가능)
@@ -263,7 +263,7 @@ int CCreator::CreateProjects()
 		//pProject->ID = projectId;		// 프로젝트의 번호	
 		//pProject->orderDate = startDate;	// 발주일
 		//pProject->startAvail = startDate; // 바로시작 가능
-		//pProject->isStart = 0;		// 진행 여부 (0: 미진행, 나머지: 진행시작한 주)
+		//pProject->runningWeeks = 0;		// 진행 여부 (0: 미진행, 나머지: 진행시작한 주)
 		//pProject->experience = ZeroOrOneByProb(95);	// 경험 (0: 무경험 1: 유경험)
 		//pProject->winProb = 30 + i*10;		// 성공 확률 song ==> 추후 사용시 생성 방법을 결정한다. 
 		//pProject->nCashFlows = 0;			// 비용 지급 횟수(규모에 따라 변경 가능)

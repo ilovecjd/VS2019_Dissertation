@@ -122,7 +122,7 @@ struct PROJECT {
 	int ID;			// 프로젝트의 번호
 	int orderDate;	// 발주일
 	int startAvail;	// 시작 가능일
-	int isStart;		// 진행 여부 (0: 미진행, 나머지: 진행시작한 주)
+	int runningWeeks;		// 진행 개월수 (0: 미진행, 나머지: 진행한 기간)
 	int experience;	// 경험 (0: 무경험 1: 유경험)
 	int winProb;		// 성공 확률
 	int nCashFlows;	// 비용 지급 횟수

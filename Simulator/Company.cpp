@@ -33,55 +33,56 @@ void CCompany::ClearMemory()
 
 BOOL CCompany::Init(CString fileName)
 {
-	Book* book = xlCreateXMLBook();  // Use xlCreateBook() for xls format	
+    Book* book = xlCreateXMLBook();  // Use xlCreateBook() for xls format	
 
-	// 정품 키 값이 들어 있다. 공개하는 프로젝트에는 포함되어 있지 않다. 
-	// 정품 키가 없으면 읽기가 300 컬럼으로 제한된다.
+    // 정품 키 값이 들어 있다. 공개하는 프로젝트에는 포함되어 있지 않다. 
+    // 정품 키가 없으면 읽기가 300 컬럼으로 제한된다.
 #ifdef INCLUDE_LIBXL_KET
-	book->setKey(_LIBXL_NAME, _LIBXL_KEY);
+    book->setKey(_LIBXL_NAME, _LIBXL_KEY);
 #endif
 
-	Sheet* projectSheet = nullptr;
+    Sheet* projectSheet = nullptr;
 
-	if (book->load(fileName)) {
-		// File exists, check for specific sheets
-		for (int i = 0; i < book->sheetCount(); ++i) {
-			Sheet* sheet = book->getSheet(i);
-			if (std::wcscmp(sheet->name(), L"project") == 0) {
-				projectSheet = sheet;				
-			}
-		}
+    if (book->load(fileName)) {
+        // File exists, check for specific sheets
+        for (int i = 0; i < book->sheetCount(); ++i) {
+            Sheet* sheet = book->getSheet(i);
+            if (std::wcscmp(sheet->name(), L"project") == 0) {
+                projectSheet = sheet;
+            }
+        }
 
-		if (!projectSheet) {
-			AfxMessageBox(_T("Sheet does not exist"), MB_OK | MB_ICONERROR);
-			return FALSE;
-		}
+        if (!projectSheet) {
+            AfxMessageBox(_T("Sheet does not exist"), MB_OK | MB_ICONERROR);
+            return FALSE;
+        }
 
-	}
-	else {
-		// File does not exist, create new file with sheets
-		AfxMessageBox(_T("File does not exist"), MB_OK | MB_ICONERROR);
-		return FALSE;
-	}
+    }
+    else {
+        // File does not exist, create new file with sheets
+        AfxMessageBox(_T("File does not exist"), MB_OK | MB_ICONERROR);
+        return FALSE;
+    }
 
-	read_global_env(book, projectSheet, &m_GlobalEnv);
-	
-	m_totalProjectNum = projectSheet->readNum(1, 3 );
+    read_global_env(book, projectSheet, &m_GlobalEnv);
+    m_totalProjectNum = projectSheet->readNum(1, 3);
 
-	m_AllProjects = new PROJECT[m_totalProjectNum];
-	memset(m_AllProjects, 0, sizeof(PROJECT) * m_totalProjectNum);
-	for (int i =0 ; i< m_totalProjectNum; i++)
-	{
-		read_project_body(book, projectSheet, m_AllProjects+i, i);
-	}
-	
-	book->release();
-	
-	//MakeOrderTable(fp);
+    m_AllProjects = new PROJECT[m_totalProjectNum];
 
-	TableInit();
-	
-	return TRUE;
+	// POJECT.runningWeeks 와 _ACTIVITY.activityType;은 파라메터로 전달되지 않는다. 0 으로 초기화 하자	
+    memset(m_AllProjects, 0, sizeof(PROJECT) * m_totalProjectNum);
+
+    for (int i = 0; i < m_totalProjectNum; i++)
+    {
+        read_project_body(book, projectSheet, m_AllProjects + i, i);
+    }
+
+    book->release();
+
+    //song MakeOrderTable(fp); 는 필요시TableInit함수 안에 추가하자 
+    TableInit();
+
+    return TRUE;
 }
 
 void CCompany::TableInit()
@@ -228,16 +229,16 @@ BOOL CCompany::CheckLastWeek(int thisWeek)
 		if (project->category == 0 ) {// 외부프로젝트면
 			// 1. payment 를 계산한다. 선금은 시작시 받기로 한다. 조건완료후 1주 후 수금			
 			// 2. 지출을 계산한다.
-			//' 3. 진행중인 프로젝트를 이관해서 기록한다.
+			// 3. 진행중인 프로젝트를 이관해서 기록한다.
 			int sum = m_doingTable[ORDER_SUM][thisWeek];
-			if (thisWeek < (project->isStart + project->duration - 1)) // ' 아직 안끝났으면
+			if (thisWeek < (project->runningWeeks + project->duration - 1)) // ' 아직 안끝났으면
 			{
 				m_doingTable[sum + 1][thisWeek] = project->ID;// 테이블 크기는 자동으로 변경된다.
 				m_doingTable[ORDER_SUM][thisWeek] = sum + 1;
 			}
 		}
 		else // 내부프로젝트
-		{
+		{	//song !!!
 			// 1. 지난주에 종료되었으면 앞으로 받을 금액표 업데이트
 			if (project->endDate == (thisWeek - 1))
 			{
@@ -251,19 +252,14 @@ BOOL CCompany::CheckLastWeek(int thisWeek)
 			}
 			else {
 
-				// 2. 진행중이면 다음주부터 시작 가능 으로 표시하고 기간은 1주 감소
-				project->orderDate = thisWeek;
-				project->startAvail = thisWeek;
-				project->duration = project->duration - 1;
-				project->activities[0].duration = project->duration - 1;      // 활동 기간
-				project->activities[0].startDate = 0;     // 시작 날짜
+				// 2. 진행중이면 내부프로젝트는 이번주부터 시작 가능 으로 표시하고
+				// 지금까지 진행된 기간을 runningWeeks 에 한주 증가시켜서 표시함.
+				project->startAvail = thisWeek;				
+				project->runningWeeks += 1;
 
-				// 인력 테이블 조정
+				// 내부 프로젝트의 인력 테이블 조정
 				RemoveInterProject(project, thisWeek);
 			}
-			
-
-			//2. 기간을 한주 줄임
 		}
 	}
 
@@ -331,50 +327,54 @@ BOOL CCompany::CheckLastWeek(int thisWeek)
 	return TRUE;
 }
 
+// 이번주에 진행했던!!! 내부프로젝트의 이번주까지의 진행상황을 체크해서 
+// 다음주부터 배정되어 있던 인원을 삭제한다.
+// 이번주에 진행중이 아니었으면 배정된 인원이 없고, 삭제할 필요도 없다.
 void CCompany::RemoveInterProject(PROJECT* project, int thisWeek)
-{
-	project->isStart = project->startAvail;
+{	
+	//project->runningWeeks => 현재가지 진행된 week 수. 0 이면 시작안한 상태
+	int runningWeeks = project->runningWeeks;
+	int startAvail = project->startAvail;
 
-	// HR 정보 업데이트
-	// 2중 루프 activity->기간-> 등급업데이트 순서로 activity들을 순서대로 가져온다.
+	//song  !!!! int gap = thisWeek - startAvail  - runningWeeks; 값들간에 문제는 없는지 체크
+	// 밀린 시간 = 경과 시간 - 진행한 시간
+	// 경과 시간 = 현재 시각 - 시작 가능 시작
+	int gap = thisWeek - startAvail - runningWeeks; 
+
+	// 예외를 위해서 메세지 박스를 띄운다. 디버깅용
+
+	// Activity들의 원본은 그대로 두고 복사해온 곳에 밀린만큼 모든 기간을 수정한다.
 	int numAct = project->numActivities;
+
+	PACTIVITY pActivity = new ACTIVITY[numAct];
 	for (int i = 0; i < numAct; i++)
 	{
-		PACTIVITY pActivity = &(project->activities[i]);
-		for (int j = 0; j < pActivity->duration; j++)
-		{
-			int col = j + thisWeek;// pActivity->startDate;
-			m_doingHR[HR_HIG][col] -= pActivity->highSkill;
-			m_doingHR[HR_MID][col] -= pActivity->midSkill;
-			m_doingHR[HR_LOW][col] -= pActivity->lowSkill;
+		pActivity[i] = *project->activities;
+		pActivity[i].startDate += gap;
+		pActivity[i].endDate += gap;
 
-			m_freeHR[HR_HIG][col] = m_totalHR[HR_HIG][col] - m_doingHR[HR_HIG][col];
-			m_freeHR[HR_MID][col] = m_totalHR[HR_MID][col] - m_doingHR[HR_MID][col];
-			m_freeHR[HR_LOW][col] = m_totalHR[HR_LOW][col] - m_doingHR[HR_LOW][col];
+		int startDate = pActivity[i].startDate;
+		int endDate = pActivity[i].endDate;
+
+		for (int j = startDate; j <= endDate; j++)
+		{	
+			if(j > thisWeek)
+			{
+				m_doingHR[HR_HIG][j] -= pActivity[i].highSkill;
+				m_doingHR[HR_MID][j] -= pActivity[i].midSkill;
+				m_doingHR[HR_LOW][j] -= pActivity[i].lowSkill;
+
+				m_freeHR[HR_HIG][j] = m_totalHR[HR_HIG][j] - m_doingHR[HR_HIG][j];
+				m_freeHR[HR_MID][j] = m_totalHR[HR_MID][j] - m_doingHR[HR_MID][j];
+				m_freeHR[HR_LOW][j] = m_totalHR[HR_LOW][j] - m_doingHR[HR_LOW][j];
+			}			
 		}
 	}
 
-	// 현황판 업데이트
-	int sum = m_doingTable[0][thisWeek];
-	m_doingTable[sum + 1][thisWeek] = project->ID;
-	m_doingTable[0][thisWeek] = sum + 1;
-
-	// 수입 테이블 업데이트. 지출은 인원 관리쪽에서 한다.	
-	int incomeDate;
-
-	if (project->isStart <thisWeek)
-	{
-		MessageBox(NULL, _T("m_isStart miss"), _T("Error"), MB_OK | MB_ICONERROR);
-	}
-	incomeDate = project->isStart + project->firstPayMonth;	// 선금 지급일
-	m_incomeTable[0][incomeDate] += project->firstPay;
-
-	incomeDate = project->isStart + project->secondPayMonth;	// 2차 지급일
-	m_incomeTable[0][incomeDate] += project->secondPay;
-
-	incomeDate = project->isStart + project->finalPayMonth;	// 3차 지급일
-	m_incomeTable[0][incomeDate] += project->finalPay;
+	delete[] pActivity;
 }
+
+
 
 void CCompany::AddHR(int grade ,int addWeek)
 {
@@ -428,27 +428,18 @@ void CCompany::SelectCandidates(int thisWeek)
 	for (int i = 0; i < m_totalProjectNum; i++)
 	{
 		PROJECT* project = m_AllProjects + i;
-		if (project->orderDate == thisWeek)
-		{
-			if (IsEnoughHR(thisWeek, project)) // 인원 체크
-			{
-				m_candidateTable[j++] = project->ID;
+		if((project->category == 1)) { //내부프로젝트
+			if (project->duration > project->runningWeeks) { // 완료되지 않은 내부프로젝트
+				if (IsInternalEnoughHR(thisWeek, project)) // 내부 프로젝트 인원 체크			
+					m_candidateTable[j++] = project->ID;
 			}
+		}
+		else if(project->orderDate == thisWeek) // 이번주 발생 프로젝트
+		{
+			if (IsEnoughHR(thisWeek, project)) // 인원 체크			
+				m_candidateTable[j++] = project->ID;
 		}
 	}
-
-
-		// 내부프로젝트에서 후보군을 찾는다.
-		for (int i = 0; i < countNPD; i++)
-		{
-			PROJECT* project = m_InterProjects + i;
-	
-			if (IsEnoughHR(thisWeek, project)) // 인원 체크
-			{
-				m_candidateTable[j++] = project->ID;
-			}
-
-		}
 }
 
 //
@@ -482,6 +473,60 @@ void CCompany::SelectCandidates(int thisWeek)
 //		}
 //	}
 //}
+
+
+// 다음주에 내부 프로젝트를 위해 투입할 인원 체크
+BOOL CCompany::IsInternalEnoughHR(int thisWeek, PROJECT* project)
+{
+	//project->runningWeeks => 현재가지 진행된 week 수. 0 이면 시작안한 상태
+	int runningWeeks = project->runningWeeks;
+	int startAvail = project->startAvail;
+
+	//song  !!!! int gap = thisWeek - startAvail  - runningWeeks; 값들간에 문제는 없는지 체크
+	// 밀린 시간 = 경과 시간 - 진행한 시간
+	// 경과 시간 = 현재 시각 - 시작 가능 시작
+	int gap = thisWeek - startAvail - runningWeeks;
+
+	// 예외를 위해서 메세지 박스를 띄운다. 디버깅용
+
+	// Activity들의 원본은 그대로 두고 복사해온 곳에 밀린만큼 모든 기간을 수정한다.
+	int numAct = project->numActivities;
+	Dynamic2DArray doingHR = m_doingHR;
+
+	PACTIVITY pActivity = new ACTIVITY[numAct];
+
+	for (int i = 0; i < numAct; i++)
+	{
+		pActivity[i] = *project->activities;
+		pActivity[i].startDate += gap;
+		pActivity[i].endDate += gap;
+
+		int startDate = pActivity[i].startDate;
+		int endDate = pActivity[i].endDate;
+
+		for (int j = startDate; j <= endDate; j++)
+		{
+			if (j == thisWeek+1) // 다음주 인원만 고려하자
+			{
+				doingHR[HR_HIG][j] -= pActivity[i].highSkill;
+				doingHR[HR_MID][j] -= pActivity[i].midSkill;
+				doingHR[HR_LOW][j] -= pActivity[i].lowSkill;
+			}
+		}
+	}
+
+	delete[] pActivity;
+
+	if (m_totalHR[HR_HIG][thisWeek + 1] < doingHR[HR_HIG][thisWeek + 1])
+		return FALSE;
+	if (m_totalHR[HR_MID][thisWeek + 1] < doingHR[HR_MID][thisWeek + 1])
+		return FALSE;
+	if (m_totalHR[HR_LOW][thisWeek + 1] < doingHR[HR_LOW][thisWeek + 1])
+		return FALSE;
+
+	return TRUE;
+}
+
 
 BOOL CCompany::IsEnoughHR(int thisWeek, PROJECT* project)
 {
@@ -547,7 +592,6 @@ void sortArrayDescending(int* indexArray, int* valueArray, int size) {
 
 void CCompany::SelectNewProject(int thisWeek)
 {	
-	
 	int valueArray[MAX_CANDIDATES] = {0, };  // 값 배열
 	int j = 0;
 
@@ -581,7 +625,6 @@ void CCompany::SelectNewProject(int thisWeek)
 		break;
 	} 
 
-
 	int i = 0;
 	while (m_candidateTable[i] != 0) {
 
@@ -589,25 +632,24 @@ void CCompany::SelectNewProject(int thisWeek)
 
 		int id = m_candidateTable[i++];
 
-		PROJECT* project = m_AllProjects + (id - 1);
+		PROJECT* project = m_AllProjects + id;
 
 		if (project->startAvail < m_GlobalEnv.maxWeek)
 		{
 			if (IsEnoughHR(thisWeek, project))
 			{
 				AddProjectEntry(project, thisWeek);
-
 			}
 		}
 	}
-
 }
 
 // 모든 체크가 끝나고 호출된다. 
 // 단지 변수들만 셑팅하자.
 void CCompany::AddProjectEntry(PROJECT* project,  int addWeek)
 {	
-	project->isStart = project->startAvail;
+	//song !!!runningWeeks 함수내 모두 확인 바람
+	project->runningWeeks = project->startAvail;
 
 	// HR 정보 업데이트
 	// 2중 루프 activity->기간-> 등급업데이트 순서로 activity들을 순서대로 가져온다.
@@ -636,17 +678,17 @@ void CCompany::AddProjectEntry(PROJECT* project,  int addWeek)
 	// 수입 테이블 업데이트. 지출은 인원 관리쪽에서 한다.	
 	int incomeDate;
 
-	if (project->isStart <addWeek)
+	if (project->runningWeeks <addWeek)
 	{
-		MessageBox(NULL, _T("m_isStart miss"), _T("Error"), MB_OK | MB_ICONERROR);
+		MessageBox(NULL, _T("m_runningWeeks miss"), _T("Error"), MB_OK | MB_ICONERROR);
 	}
-	incomeDate = project->isStart + project->firstPayMonth;	// 선금 지급일
+	incomeDate = project->runningWeeks + project->firstPayMonth;	// 선금 지급일
 	m_incomeTable[0][incomeDate] += project->firstPay;
 	
-	incomeDate = project->isStart + project->secondPayMonth;	// 2차 지급일
+	incomeDate = project->runningWeeks + project->secondPayMonth;	// 2차 지급일
 	m_incomeTable[0][incomeDate] += project->secondPay;
 
-	incomeDate = project->isStart + project->finalPayMonth;	// 3차 지급일
+	incomeDate = project->runningWeeks + project->finalPayMonth;	// 3차 지급일
 	m_incomeTable[0][incomeDate] += project->finalPay;
 }
 
