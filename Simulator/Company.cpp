@@ -597,19 +597,19 @@ void CCompany::SelectNewProject(int thisWeek)
 	int valueArray[MAX_CANDIDATES] = {0, };  // 값 배열
 	int j = 0;
 
-	while (m_candidateTable[j] != 0) {
+	while (m_candidateTable[j] != -1) {
 
 		PROJECT* project;
 		int id = m_candidateTable[j];
 
-		project = m_AllProjects + (id - 1);
+		project = m_AllProjects + id;
 		if(project->category == 0){// 외부 프로젝트
 			valueArray[j] = project->profit;
 		}
 		else {  //내부 프로젝트
 			valueArray[j] = project->profit * 4 * 12 *3;
 		}
-		j = j + 1;
+		j ++;
 	}
 	
 	// 설정된 우선순위대로 프로젝트를 재 배치 한다.
@@ -628,7 +628,7 @@ void CCompany::SelectNewProject(int thisWeek)
 	} 
 
 	int i = 0;
-	while (m_candidateTable[i] != 0) {
+	while (m_candidateTable[i] != -1) {
 
 		if (i > MAX_CANDIDATES) break;
 
