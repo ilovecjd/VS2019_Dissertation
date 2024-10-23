@@ -258,7 +258,8 @@ BOOL CCompany::CheckLastWeek(int thisWeek)
 				project->runningWeeks += 1;
 
 				// 내부 프로젝트의 인력 테이블 조정
-				RemoveInterProject(project, thisWeek);
+				// 내부는 넣을때 한주씩만 넣어서 reomve 가 필요 없음.
+				//RemoveInterProject(project, thisWeek);
 			}
 		}
 	}
@@ -325,53 +326,6 @@ BOOL CCompany::CheckLastWeek(int thisWeek)
 	}
 	
 	return TRUE;
-}
-
-// 이번주에 진행했던!!! 내부프로젝트의 이번주까지의 진행상황을 체크해서 
-// 다음주부터 배정되어 있던 인원을 삭제한다.
-// 이번주에 진행중이 아니었으면 배정된 인원이 없고, 삭제할 필요도 없다.
-void CCompany::RemoveInterProject(PROJECT* project, int thisWeek)
-{	
-	//project->runningWeeks => 현재가지 진행된 week 수. 0 이면 시작안한 상태
-	int runningWeeks = project->runningWeeks;
-	int startAvail = project->startAvail;
-
-	//song  !!!! int gap = thisWeek - startAvail  - runningWeeks; 값들간에 문제는 없는지 체크
-	// 밀린 시간 = 경과 시간 - 진행한 시간
-	// 경과 시간 = 현재 시각 - 시작 가능 시작
-	int gap = thisWeek - startAvail - runningWeeks; 
-
-	// 예외를 위해서 메세지 박스를 띄운다. 디버깅용
-
-	// Activity들의 원본은 그대로 두고 복사해온 곳에 밀린만큼 모든 기간을 수정한다.
-	int numAct = project->numActivities;
-
-	PACTIVITY pActivity = new ACTIVITY[numAct];
-	for (int i = 0; i < numAct; i++)
-	{
-		pActivity[i] = *project->activities;
-		pActivity[i].startDate += gap;
-		pActivity[i].endDate += gap;
-
-		int startDate = pActivity[i].startDate;
-		int endDate = pActivity[i].endDate;
-
-		for (int j = startDate; j <= endDate; j++)
-		{	
-			if(j > thisWeek)
-			{
-				m_doingHR[HR_HIG][j] -= pActivity[i].highSkill;
-				m_doingHR[HR_MID][j] -= pActivity[i].midSkill;
-				m_doingHR[HR_LOW][j] -= pActivity[i].lowSkill;
-
-				m_freeHR[HR_HIG][j] = m_totalHR[HR_HIG][j] - m_doingHR[HR_HIG][j];
-				m_freeHR[HR_MID][j] = m_totalHR[HR_MID][j] - m_doingHR[HR_MID][j];
-				m_freeHR[HR_LOW][j] = m_totalHR[HR_LOW][j] - m_doingHR[HR_LOW][j];
-			}			
-		}
-	}
-
-	delete[] pActivity;
 }
 
 
@@ -606,8 +560,8 @@ void CCompany::SelectNewProject(int thisWeek)
 		if(project->category == 0){// 외부 프로젝트
 			valueArray[j] = project->profit;
 		}
-		else {  //내부 프로젝트
-			valueArray[j] = project->profit * 4 * 12 *3;
+		else {  //내부 프로젝트는 금액은 0으로. 내부 외부 경쟁만 가져가자.
+			valueArray[j] = 0;// project->profit * 4 * 12 * 3;
 		}
 		j ++;
 	}
@@ -636,13 +590,24 @@ void CCompany::SelectNewProject(int thisWeek)
 
 		PROJECT* project = m_AllProjects + id;
 
-		if (project->startAvail < m_GlobalEnv.maxWeek)
+		if (project->category == 0)// 외부 프로젝트면
 		{
-			if (IsEnoughHR(thisWeek, project))
+			if (project->startAvail < m_GlobalEnv.maxWeek)
 			{
-				AddProjectEntry(project, thisWeek);
+				if (IsEnoughHR(thisWeek, project))
+				{
+					AddProjectEntry(project, thisWeek);
+				}
 			}
 		}
+		else  // 내부프로젝트면 
+		{
+			if (IsInternalEnoughHR(thisWeek, project))
+			{
+				AddInternalProjectEntry(project, thisWeek);
+			}
+		}
+		
 	}
 }
 
@@ -687,6 +652,112 @@ void CCompany::AddProjectEntry(PROJECT* project,  int addWeek)
 	incomeDate = project->runningWeeks + project->firstPayMonth;	// 선금 지급일
 	m_incomeTable[0][incomeDate] += project->firstPay;
 	
+	incomeDate = project->runningWeeks + project->secondPayMonth;	// 2차 지급일
+	m_incomeTable[0][incomeDate] += project->secondPay;
+
+	incomeDate = project->runningWeeks + project->finalPayMonth;	// 3차 지급일
+	m_incomeTable[0][incomeDate] += project->finalPay;
+}
+
+
+// 이번주에 진행했던!!! 내부프로젝트의 이번주까지의 진행상황을 체크해서 
+// 다음주부터 배정되어 있던 인원을 삭제한다.
+// 이번주에 진행중이 아니었으면 배정된 인원이 없고, 삭제할 필요도 없다.
+void CCompany::RemoveInterProject(PROJECT* project, int thisWeek)
+{
+	//project->runningWeeks => 현재가지 진행된 week 수. 0 이면 시작안한 상태
+	int runningWeeks = project->runningWeeks;
+	int startAvail = project->startAvail;
+
+	//song  !!!! int gap = thisWeek - startAvail  - runningWeeks; 값들간에 문제는 없는지 체크
+	// 밀린 시간 = 경과 시간 - 진행한 시간
+	// 경과 시간 = 현재 시각 - 시작 가능 시작
+	int gap = thisWeek - startAvail - runningWeeks;
+
+	// 예외를 위해서 메세지 박스를 띄운다. 디버깅용
+
+	// Activity들의 원본은 그대로 두고 복사해온 곳에 밀린만큼 모든 기간을 수정한다.
+	int numAct = project->numActivities;
+
+	PACTIVITY pActivity = new ACTIVITY[numAct];
+	for (int i = 0; i < numAct; i++)
+	{
+		pActivity[i] = *project->activities + i;
+		pActivity[i].startDate += gap;
+		pActivity[i].endDate += gap;
+
+		int startDate = pActivity[i].startDate;
+		int endDate = pActivity[i].endDate;
+
+		for (int j = startDate; j <= endDate; j++)
+		{
+			if (j > thisWeek)
+			{
+				m_doingHR[HR_HIG][j] -= pActivity[i].highSkill;
+				m_doingHR[HR_MID][j] -= pActivity[i].midSkill;
+				m_doingHR[HR_LOW][j] -= pActivity[i].lowSkill;
+
+				m_freeHR[HR_HIG][j] = m_totalHR[HR_HIG][j] - m_doingHR[HR_HIG][j];
+				m_freeHR[HR_MID][j] = m_totalHR[HR_MID][j] - m_doingHR[HR_MID][j];
+				m_freeHR[HR_LOW][j] = m_totalHR[HR_LOW][j] - m_doingHR[HR_LOW][j];
+			}
+		}
+	}
+
+	delete[] pActivity;
+}
+
+
+
+// 내부 프로젝트를 진행하게 현황판 수정
+void CCompany::AddInternalProjectEntry(PROJECT* project, int addWeek)
+{
+
+	//project->runningWeeks => 현재까지 진행된 week 수. 0 이면 시작안한 상태
+	int runningWeeks = project->runningWeeks;
+	int startAvail = project->startAvail;
+
+	//song  !!!! int gap = thisWeek - startAvail  - runningWeeks; 값들간에 문제는 없는지 체크
+	// 밀린 시간 = 경과 시간 - 진행한 시간
+	// 경과 시간 = 현재 시각 - 시작 가능 시작
+	int gap = thisWeek - startAvail - runningWeeks;
+
+	// 예외를 위해서 메세지 박스를 띄운다. 디버깅용
+		
+	// HR 정보 업데이트
+	// 2중 루프 activity->기간-> 등급업데이트 순서로 activity들을 순서대로 가져온다.
+	int numAct = project->numActivities;
+	for (int i = 0; i < numAct; i++)
+	{
+		PACTIVITY pActivity = &(project->activities[i]);
+		for (int j = 0; j < pActivity->duration; j++)
+		{
+			int col = j + pActivity->startDate;
+			m_doingHR[HR_HIG][col] += pActivity->highSkill;
+			m_doingHR[HR_MID][col] += pActivity->midSkill;
+			m_doingHR[HR_LOW][col] += pActivity->lowSkill;
+
+			m_freeHR[HR_HIG][col] = m_totalHR[HR_HIG][col] - m_doingHR[HR_HIG][col];
+			m_freeHR[HR_MID][col] = m_totalHR[HR_MID][col] - m_doingHR[HR_MID][col];
+			m_freeHR[HR_LOW][col] = m_totalHR[HR_LOW][col] - m_doingHR[HR_LOW][col];
+		}
+	}
+
+	// 현황판 업데이트
+	int sum = m_doingTable[0][addWeek];
+	m_doingTable[sum + 1][addWeek] = project->ID;
+	m_doingTable[0][addWeek] = sum + 1;
+
+	// 수입 테이블 업데이트. 지출은 인원 관리쪽에서 한다.	
+	int incomeDate;
+
+	if (project->runningWeeks < addWeek)
+	{
+		MessageBox(NULL, _T("m_runningWeeks miss"), _T("Error"), MB_OK | MB_ICONERROR);
+	}
+	incomeDate = project->runningWeeks + project->firstPayMonth;	// 선금 지급일
+	m_incomeTable[0][incomeDate] += project->firstPay;
+
 	incomeDate = project->runningWeeks + project->secondPayMonth;	// 2차 지급일
 	m_incomeTable[0][incomeDate] += project->secondPay;
 
