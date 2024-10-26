@@ -18,17 +18,7 @@ CCompany::~CCompany()
 
 void CCompany::ClearMemory() 
 {
-	if (m_orderTable[0] != NULL)
-	{
-		delete[] m_orderTable[0];
-		m_orderTable[0] = NULL;
-	}
 
-	if (m_orderTable[1] != NULL)
-	{
-		delete[] m_orderTable[1];
-		m_orderTable[1] = NULL;
-	}
 }
 
 BOOL CCompany::Init(CString fileName)
@@ -87,29 +77,36 @@ BOOL CCompany::Init(CString fileName)
 
 void CCompany::TableInit()
 {
-	//m_orderTable.Resize(2, nWeeks);
+	m_orderTable.Resize(2, m_GlobalEnv.maxWeek);
 
 	m_doingHR.Resize(3, m_GlobalEnv.maxWeek);
 	m_freeHR.Resize(3, m_GlobalEnv.maxWeek);
 	m_totalHR.Resize(3, m_GlobalEnv.maxWeek);
 
-	m_doingTable.Resize(11, m_GlobalEnv.maxWeek);
-	m_doneTable.Resize(11, m_GlobalEnv.maxWeek);
-	m_defferTable.Resize(11, m_GlobalEnv.maxWeek);
+	m_doingTable.Resize(MAX_DOING_TABLE_SIZE, m_GlobalEnv.maxWeek);
+	m_doneTable.Resize(MAX_DOING_TABLE_SIZE, m_GlobalEnv.maxWeek);
+	m_defferTable.Resize(MAX_DOING_TABLE_SIZE, m_GlobalEnv.maxWeek);
 
 	m_incomeTable.Resize(1, m_GlobalEnv.maxWeek);
 	m_expensesTable.Resize(1, m_GlobalEnv.maxWeek);
+	m_balanceTable.Resize(1, m_GlobalEnv.maxWeek);
 
-	m_doingHR.Clear();
-	m_totalHR.Clear();
-	m_freeHR.Clear();	
+	m_doingHR.Clear(0);
+	m_totalHR.Clear(0);
+	m_freeHR.Clear(0);	
 	
-	m_doingTable.Clear();
-	m_doneTable.Clear();
-	m_defferTable.Clear();
+	m_doingTable.Clear(-1);
+	m_doneTable.Clear(-1);
+	m_defferTable.Clear(-1);
+	for (int i = 0; i < m_GlobalEnv.maxWeek; i++) {
+		m_doingTable[0][i] = 0;		
+		m_doneTable[0][i] = 0;
+		m_defferTable[0][i] = 0;
+	}
 
-	m_incomeTable.Clear();
-	m_expensesTable.Clear();
+	m_incomeTable.Clear(0);
+	m_expensesTable.Clear(0);
+	m_balanceTable.Clear(0);
 
 	m_totalHR[HR_HIG][0] = m_freeHR[HR_HIG][0] = m_GlobalEnv.Hr_Init_H;
 	m_totalHR[HR_MID][0] = m_freeHR[HR_MID][0] = m_GlobalEnv.Hr_Init_M;
@@ -119,6 +116,7 @@ void CCompany::TableInit()
 	double rate = m_GlobalEnv.ExpenseRate;
 	int expenses = (m_GlobalEnv.Hr_Init_H * 50 * rate) + (m_GlobalEnv.Hr_Init_M * 39 * rate) + (m_GlobalEnv.Hr_Init_L * 25 * rate);
 
+	m_incomeTable[0][0] = m_GlobalEnv.Cash_Init;
 	for (int i = 0; i < m_GlobalEnv.maxWeek; i++)
 	{
 		m_totalHR[HR_HIG][i] = m_GlobalEnv.Hr_Init_H;
@@ -131,35 +129,7 @@ void CCompany::TableInit()
 // Order table 복구
 void CCompany::ReadOrder(FILE* fp)
 {
-	int orderTableSize = sizeof(int) * m_GlobalEnv.maxWeek * 2;  // 바이트 단위로 크기 계산
-	int* temp = new int[m_GlobalEnv.maxWeek * 2];
-	ReadDataWithHeader(fp, temp, orderTableSize, TYPE_ORDER);
 
-	// 기존의 m_orderTable이 있었다면 해제
-	if (m_orderTable[0] != NULL)
-	{
-		delete[] m_orderTable[0];
-		m_orderTable[0] = NULL;
-	}
-
-	if (m_orderTable[1] != NULL)
-	{
-		delete[] m_orderTable[1];
-		m_orderTable[1] = NULL;
-	}
-
-	int* order0 = new int[m_GlobalEnv.maxWeek];
-	int* order1 = new int[m_GlobalEnv.maxWeek];
-
-	memcpy(order0, (int*)temp, m_GlobalEnv.maxWeek*sizeof(int));
-	memcpy(order1, (int*)temp + m_GlobalEnv.maxWeek, m_GlobalEnv.maxWeek * sizeof(int));
-
-	m_orderTable[0] = order0;
-	m_orderTable[1] = order1;
-
-	delete temp;
-	// 필요 없음 delete order0;
-	// 필요 없음 delete order1;
 
 }
 
@@ -216,50 +186,48 @@ BOOL CCompany::CheckLastWeek(int thisWeek)
 	if (0 == thisWeek) // 첫주는 체크할 지난주가 없음
 		return TRUE;
 
+	m_doingTable[ORDER_SUM][thisWeek] = 0; // 이번주 sum 초기화
 	int nLastProjects = m_doingTable[ORDER_SUM][thisWeek - 1];//지난주에 진행 중이던 프로젝트의 갯수
 
 	for (int i = 0; i < nLastProjects; i++)
 	{
 		int prjId = m_doingTable[i + 1][thisWeek - 1];
-		if (prjId == 0)
+		if (prjId == -1)
 			return TRUE;
 
-		PROJECT* project = m_AllProjects + (prjId - 1);
+		PROJECT* project = m_AllProjects + prjId;
+		project->runningWeeks += 1; // 지금까지 진행된 기간을 runningWeeks 에 한주 증가시켜서 표시함.
 
 		if (project->category == 0 ) {// 외부프로젝트면
 			// 1. payment 를 계산한다. 선금은 시작시 받기로 한다. 조건완료후 1주 후 수금			
 			// 2. 지출을 계산한다.
 			// 3. 진행중인 프로젝트를 이관해서 기록한다.
 			int sum = m_doingTable[ORDER_SUM][thisWeek];
-			if (thisWeek < (project->runningWeeks + project->duration - 1)) // ' 아직 안끝났으면
+			if (thisWeek <= project->endDate ) // ' 아직 안끝났으면
 			{
 				m_doingTable[sum + 1][thisWeek] = project->ID;// 테이블 크기는 자동으로 변경된다.
 				m_doingTable[ORDER_SUM][thisWeek] = sum + 1;
 			}
 		}
 		else // 내부프로젝트
-		{	//song !!!
+		{
 			// 1. 지난주에 종료되었으면 앞으로 받을 금액표 업데이트
-			if (project->endDate == (thisWeek - 1))
-			{
+			if (project->duration == project->runningWeeks){
 				int win = ZeroOrOneByProb(project->winProb); // 성공 확율에 따라서 금액을 결정한다.
-
 				if (win) {
 					for (int future = thisWeek; future < m_GlobalEnv.maxWeek ; future++) {
-						m_incomeTable[0][future] += project->profit;
+						if ((future-thisWeek) < (52 * 3)) {// 신제품은 3년만 유효
+							int tempIncome = project->profit / project->duration;
+							m_incomeTable[0][future] += tempIncome;
+						}						
 					}
 				}
 			}
 			else {
-
-				// 2. 진행중이면 내부프로젝트는 이번주부터 시작 가능 으로 표시하고
-				// 지금까지 진행된 기간을 runningWeeks 에 한주 증가시켜서 표시함.
-				project->startAvail = thisWeek;				
-				project->runningWeeks += 1;
-
+				// 2. 진행중이면 내부프로젝트는 이번주부터 시작 가능 으로 표시하고				
+				project->startAvail = thisWeek;	
 				// 내부 프로젝트의 인력 테이블 조정
-				// 내부는 넣을때 한주씩만 넣어서 reomve 가 필요 없음.
-				//RemoveInterProject(project, thisWeek);
+				RemoveInternalProjectEntry(project, thisWeek);
 			}
 		}
 	}
@@ -268,10 +236,11 @@ BOOL CCompany::CheckLastWeek(int thisWeek)
 	// 나중에 후회 해도 일단은 편하게 코딩.	
 
 	// 현재 보유중인 현금
-	int Cash = m_GlobalEnv.Cash_Init;
+	int Cash = 0;// m_incomeTable의 첫 갑을 m_GlobalEnv.Cash_Init; 로 초기화함.
 	for (int i = 0; i < thisWeek; i++)
 	{
 		Cash += (m_incomeTable[0][i] - m_expensesTable[0][i]);
+		m_balanceTable[0][i] = Cash;
 	}
 
 	// 이번주 현금은 이상이 없는가?
@@ -301,8 +270,7 @@ BOOL CCompany::CheckLastWeek(int thisWeek)
 				int i = rand() % 3; /// 고급,중급,초급중 아무나
 				AddHR(i, thisWeek + m_GlobalEnv.Hr_LeadTime);// 인원 충원 리드 타임
 			}
-		}
-		
+		}		
 	}
 
 	else 
@@ -346,6 +314,11 @@ void CCompany::AddHR(int grade ,int addWeek)
 		m_totalHR[HR_HIG][i] = m_totalHR[HR_HIG][addWeek];
 		m_totalHR[HR_MID][i] = m_totalHR[HR_MID][addWeek];
 		m_totalHR[HR_LOW][i] = m_totalHR[HR_LOW][addWeek];
+
+		m_freeHR[HR_HIG][i] = m_totalHR[HR_HIG][i] - m_doingHR[HR_HIG][i];
+		m_freeHR[HR_MID][i] = m_totalHR[HR_MID][i] - m_doingHR[HR_MID][i];
+		m_freeHR[HR_LOW][i] = m_totalHR[HR_LOW][i] - m_doingHR[HR_LOW][i];
+
 		m_expensesTable[0][i] = expenses;
 	}
 }
@@ -366,6 +339,11 @@ void CCompany::RemoveHR(int grade, int removeWeek)
 		m_totalHR[HR_HIG][i] = m_totalHR[HR_HIG][removeWeek];
 		m_totalHR[HR_MID][i] = m_totalHR[HR_MID][removeWeek];
 		m_totalHR[HR_LOW][i] = m_totalHR[HR_LOW][removeWeek];
+				
+		m_freeHR[HR_HIG][i] = m_totalHR[HR_HIG][i] - m_doingHR[HR_HIG][i];
+		m_freeHR[HR_MID][i] = m_totalHR[HR_MID][i] - m_doingHR[HR_MID][i];
+		m_freeHR[HR_LOW][i] = m_totalHR[HR_LOW][i] - m_doingHR[HR_LOW][i];
+
 		m_expensesTable[0][i] = expenses;
 	}
 }
@@ -453,7 +431,7 @@ BOOL CCompany::IsInternalEnoughHR(int thisWeek, PROJECT* project)
 
 	for (int i = 0; i < numAct; i++)
 	{
-		pActivity[i] = *project->activities;
+		pActivity[i] = project->activities[i];
 		pActivity[i].startDate += gap;
 		pActivity[i].endDate += gap;
 
@@ -462,23 +440,29 @@ BOOL CCompany::IsInternalEnoughHR(int thisWeek, PROJECT* project)
 
 		for (int j = startDate; j <= endDate; j++)
 		{
-			if (j == thisWeek+1) // 다음주 인원만 고려하자
+			if (j >= thisWeek) // 
 			{
-				doingHR[HR_HIG][j] -= pActivity[i].highSkill;
-				doingHR[HR_MID][j] -= pActivity[i].midSkill;
-				doingHR[HR_LOW][j] -= pActivity[i].lowSkill;
+				doingHR[HR_HIG][j] += pActivity[i].highSkill;
+				doingHR[HR_MID][j] += pActivity[i].midSkill;
+				doingHR[HR_LOW][j] += pActivity[i].lowSkill;
+
+				if (m_totalHR[HR_HIG][j] < doingHR[HR_HIG][j]) {
+					delete[] pActivity;
+					return FALSE;
+				}
+				if (m_totalHR[HR_MID][j] < doingHR[HR_MID][j]) {
+					delete[] pActivity;
+					return FALSE;
+				}
+				if (m_totalHR[HR_LOW][j] < doingHR[HR_LOW][j]) {
+					delete[] pActivity;
+					return FALSE;
+				}
 			}
 		}
 	}
 
-	delete[] pActivity;
-
-	if (m_totalHR[HR_HIG][thisWeek + 1] < doingHR[HR_HIG][thisWeek + 1])
-		return FALSE;
-	if (m_totalHR[HR_MID][thisWeek + 1] < doingHR[HR_MID][thisWeek + 1])
-		return FALSE;
-	if (m_totalHR[HR_LOW][thisWeek + 1] < doingHR[HR_LOW][thisWeek + 1])
-		return FALSE;
+	delete[] pActivity;	
 
 	return TRUE;
 }
@@ -660,10 +644,8 @@ void CCompany::AddProjectEntry(PROJECT* project,  int addWeek)
 }
 
 
-// 이번주에 진행했던!!! 내부프로젝트의 이번주까지의 진행상황을 체크해서 
-// 다음주부터 배정되어 있던 인원을 삭제한다.
-// 이번주에 진행중이 아니었으면 배정된 인원이 없고, 삭제할 필요도 없다.
-void CCompany::RemoveInterProject(PROJECT* project, int thisWeek)
+// 내부 프로젝트의 이번주 인원 배정
+void CCompany::AddInternalProjectEntry(PROJECT* project, int thisWeek)
 {
 	//project->runningWeeks => 현재가지 진행된 week 수. 0 이면 시작안한 상태
 	int runningWeeks = project->runningWeeks;
@@ -682,7 +664,7 @@ void CCompany::RemoveInterProject(PROJECT* project, int thisWeek)
 	PACTIVITY pActivity = new ACTIVITY[numAct];
 	for (int i = 0; i < numAct; i++)
 	{
-		pActivity[i] = *project->activities + i;
+		pActivity[i] = project->activities[i];
 		pActivity[i].startDate += gap;
 		pActivity[i].endDate += gap;
 
@@ -691,7 +673,57 @@ void CCompany::RemoveInterProject(PROJECT* project, int thisWeek)
 
 		for (int j = startDate; j <= endDate; j++)
 		{
-			if (j > thisWeek)
+			if (j >= thisWeek)
+			{
+				m_doingHR[HR_HIG][j] += pActivity[i].highSkill;
+				m_doingHR[HR_MID][j] += pActivity[i].midSkill;
+				m_doingHR[HR_LOW][j] += pActivity[i].lowSkill;
+
+				m_freeHR[HR_HIG][j] = m_totalHR[HR_HIG][j] - m_doingHR[HR_HIG][j];
+				m_freeHR[HR_MID][j] = m_totalHR[HR_MID][j] - m_doingHR[HR_MID][j];
+				m_freeHR[HR_LOW][j] = m_totalHR[HR_LOW][j] - m_doingHR[HR_LOW][j];
+			}
+		}
+	}
+
+	// 현황판 업데이트
+	int sum = m_doingTable[0][thisWeek];
+	m_doingTable[sum + 1][thisWeek] = project->ID;
+	m_doingTable[0][thisWeek] = sum + 1;
+
+	delete[] pActivity;
+}
+
+void CCompany::RemoveInternalProjectEntry(PROJECT* project, int thisWeek)
+{
+	//project->runningWeeks => 현재가지 진행된 week 수. 0 이면 시작안한 상태
+	int runningWeeks = project->runningWeeks;
+	int startAvail = project->startAvail;
+
+	//song  !!!! int gap = thisWeek - startAvail  - runningWeeks; 값들간에 문제는 없는지 체크
+	// 밀린 시간 = 경과 시간 - 진행한 시간
+	// 경과 시간 = 현재 시각 - 시작 가능 시작
+	int gap = thisWeek - startAvail - runningWeeks;
+
+	// 예외를 위해서 메세지 박스를 띄운다. 디버깅용
+
+	// Activity들의 원본은 그대로 두고 복사해온 곳에 밀린만큼 모든 기간을 수정한다.
+	int numAct = project->numActivities;
+
+
+	PACTIVITY pActivity = new ACTIVITY[numAct];
+	for (int i = 0; i < numAct; i++)
+	{
+		pActivity[i] = project->activities[i];
+		pActivity[i].startDate += gap;
+		pActivity[i].endDate += gap;
+
+		int startDate = pActivity[i].startDate;
+		int endDate = pActivity[i].endDate;
+
+		for (int j = startDate; j <= endDate; j++)
+		{
+			if (j >= thisWeek)
 			{
 				m_doingHR[HR_HIG][j] -= pActivity[i].highSkill;
 				m_doingHR[HR_MID][j] -= pActivity[i].midSkill;
@@ -704,67 +736,10 @@ void CCompany::RemoveInterProject(PROJECT* project, int thisWeek)
 		}
 	}
 
+	// 현황판 업데이트는 필요 없다. 아직 현황판에 적용하기 전이다.	
+
 	delete[] pActivity;
 }
-
-
-
-// 내부 프로젝트를 진행하게 현황판 수정
-void CCompany::AddInternalProjectEntry(PROJECT* project, int addWeek)
-{
-
-	//project->runningWeeks => 현재까지 진행된 week 수. 0 이면 시작안한 상태
-	int runningWeeks = project->runningWeeks;
-	int startAvail = project->startAvail;
-
-	//song  !!!! int gap = thisWeek - startAvail  - runningWeeks; 값들간에 문제는 없는지 체크
-	// 밀린 시간 = 경과 시간 - 진행한 시간
-	// 경과 시간 = 현재 시각 - 시작 가능 시작
-	int gap = thisWeek - startAvail - runningWeeks;
-
-	// 예외를 위해서 메세지 박스를 띄운다. 디버깅용
-		
-	// HR 정보 업데이트
-	// 2중 루프 activity->기간-> 등급업데이트 순서로 activity들을 순서대로 가져온다.
-	int numAct = project->numActivities;
-	for (int i = 0; i < numAct; i++)
-	{
-		PACTIVITY pActivity = &(project->activities[i]);
-		for (int j = 0; j < pActivity->duration; j++)
-		{
-			int col = j + pActivity->startDate;
-			m_doingHR[HR_HIG][col] += pActivity->highSkill;
-			m_doingHR[HR_MID][col] += pActivity->midSkill;
-			m_doingHR[HR_LOW][col] += pActivity->lowSkill;
-
-			m_freeHR[HR_HIG][col] = m_totalHR[HR_HIG][col] - m_doingHR[HR_HIG][col];
-			m_freeHR[HR_MID][col] = m_totalHR[HR_MID][col] - m_doingHR[HR_MID][col];
-			m_freeHR[HR_LOW][col] = m_totalHR[HR_LOW][col] - m_doingHR[HR_LOW][col];
-		}
-	}
-
-	// 현황판 업데이트
-	int sum = m_doingTable[0][addWeek];
-	m_doingTable[sum + 1][addWeek] = project->ID;
-	m_doingTable[0][addWeek] = sum + 1;
-
-	// 수입 테이블 업데이트. 지출은 인원 관리쪽에서 한다.	
-	int incomeDate;
-
-	if (project->runningWeeks < addWeek)
-	{
-		MessageBox(NULL, _T("m_runningWeeks miss"), _T("Error"), MB_OK | MB_ICONERROR);
-	}
-	incomeDate = project->runningWeeks + project->firstPayMonth;	// 선금 지급일
-	m_incomeTable[0][incomeDate] += project->firstPay;
-
-	incomeDate = project->runningWeeks + project->secondPayMonth;	// 2차 지급일
-	m_incomeTable[0][incomeDate] += project->secondPay;
-
-	incomeDate = project->runningWeeks + project->finalPayMonth;	// 3차 지급일
-	m_incomeTable[0][incomeDate] += project->finalPay;
-}
-
 
 // dash boar 용 배열들의 크기 조절	
 //void CCompany::AllTableInit(int nWeeks)
@@ -856,11 +831,16 @@ int CCompany::CalculateTotalInCome()
 
 void CCompany::PrintCompanyResualt()
 {
-	m_XlFileName = _T("d:\\test\\newresualt.xlsx");
+	m_XlFileName = _T("d:/test/newresualt.xlsx");
 	CString strSheetName = _T("result");
 
 	Book* book = xlCreateXMLBook();  // Use xlCreateBook() for xls format	
-	book->setKey(L"Jiho Song", L"windows-252327000bc9ee046eb86665a2ybo1s890f4fde5");
+
+	// 정품 키 값이 들어 있다. 공개하는 프로젝트에는 포함되어 있지 않다. 
+	// 정품 키가 없으면 읽기가 300 컬럼으로 제한된다.
+#ifdef INCLUDE_LIBXL_KET
+	book->setKey(_LIBXL_NAME, _LIBXL_KEY);
+#endif	
 
 	Sheet* resultSheet = nullptr;
 
@@ -892,41 +872,48 @@ void CCompany::PrintCompanyResualt()
 
 void CCompany::write_CompanyInfo(Book* book, Sheet* sheet)
 {
-	int index = 1;// 엑셀의 2행 부터 기록 => 행의 시작이 0번 인덱스
+	sheet->writeStr(0, 0, _T("종료주"));
+	sheet->writeNum(0, 1, m_lastDecisionWeek);
 
+	int index = 1;// 엑셀의 2행 부터 기록 => 행의 시작이 0번 인덱스
+	draw_outer_border(book, sheet, index, 0, index + 2, m_GlobalEnv.SimulationWeeks, BORDERSTYLE_THIN, COLOR_BLACK);
 	sheet->writeStr(index++, 0, _T("주"));
 	sheet->writeStr(index++, 0, _T("누계"));
 	sheet->writeStr(index++, 0, _T("발주"));
-
+	
 
 	for (int col = 0; col < m_GlobalEnv.SimulationWeeks; ++col) {
 		sheet->writeNum(1, col+1, col);
 		sheet->writeNum(2, col+1, m_orderTable[0][col]);
 		sheet->writeNum(3, col+1, m_orderTable[1][col]);
+
+		sheet->writeNum(20, col + 1, col);// 21행에도 몇주인지 적어 주자.
 	}
 
 
-	index = 5; // 엑셀의 6행 부터 기록
-
-	draw_outer_border(book, sheet, index+1, 0, index+3 , m_GlobalEnv.SimulationWeeks, BORDERSTYLE_THIN, COLOR_BLACK);
-
+	index = 5; // 엑셀의 6행 부터 기록	
+	draw_outer_border(book, sheet, index+1, 0, index + 3, m_GlobalEnv.SimulationWeeks, BORDERSTYLE_THIN, COLOR_BLACK);
 	sheet->writeStr(index++, 0, _T("투입"));
 	sheet->writeStr(index++, 0, _T("H"));
 	sheet->writeStr(index++, 0, _T("M"));
 	sheet->writeStr(index++, 0, _T("L"));
+	
 
 	index = 10; // 엑셀의 11행 부터 기록
+	draw_outer_border(book, sheet, index + 1, 0, index + 3, m_GlobalEnv.SimulationWeeks, BORDERSTYLE_THIN, COLOR_BLACK);
 	sheet->writeStr(index++, 0, _T("여유"));
 	sheet->writeStr(index++, 0, _T("H"));
 	sheet->writeStr(index++, 0, _T("M"));
 	sheet->writeStr(index++, 0, _T("L"));
-
+	
+	
 	index = 15; // 엑셀의 16행 부터 기록
+	draw_outer_border(book, sheet, index + 1, 0, index + 3, m_GlobalEnv.SimulationWeeks, BORDERSTYLE_THIN, COLOR_BLACK);
 	sheet->writeStr(index++, 0, _T("총원"));
 	sheet->writeStr(index++, 0, _T("H"));
 	sheet->writeStr(index++, 0, _T("M"));
 	sheet->writeStr(index++, 0, _T("L"));
-
+	
 
 	for (int col = 0; col < m_GlobalEnv.SimulationWeeks; ++col) {
 
@@ -948,19 +935,32 @@ void CCompany::write_CompanyInfo(Book* book, Sheet* sheet)
 	}
 
 
+	for (int col = 0; col < m_GlobalEnv.SimulationWeeks; ++col) {
 
+		draw_outer_border(book, sheet, 21, 0, 21 + MAX_DOING_TABLE_SIZE - 1, m_GlobalEnv.SimulationWeeks, BORDERSTYLE_THIN, COLOR_BLACK);
 
-	//// First row settings
-	//sheet->writeNum(posY, posX++, pProject->category);
-	//sheet->writeNum(posY, posX++, pProject->ID);
-	//sheet->writeNum(posY, posX++, pProject->duration);
-	//sheet->writeNum(posY, posX++, pProject->startAvail);
-	//sheet->writeNum(posY, posX++, pProject->endDate);
-	//sheet->writeNum(posY, posX++, pProject->orderDate);
-	//sheet->writeNum(posY, posX++, pProject->profit);
-	//sheet->writeNum(posY, posX++, pProject->experience);
-	//sheet->writeNum(posY, posX++, pProject->winProb);
+		for (int i = 0; i < MAX_DOING_TABLE_SIZE; i++)// 
+		{
+			index = 21; 
+			sheet->writeNum(index+i, col + 1, m_doingTable[i][col]);
 
+			/*index += (MAX_DOING_TABLE_SIZE + 2);
+			sheet->writeNum(index+i, col + 1, m_doneTable[i][col]);
+
+			index += (MAX_DOING_TABLE_SIZE + 2);
+			sheet->writeNum(index+i, col + 1, m_defferTable[i][col]);*/
+		}
+
+		index += (MAX_DOING_TABLE_SIZE + 1);
+		sheet->writeNum(index , col + 1, m_incomeTable[0][col]);
+
+		index += 1;
+		sheet->writeNum(index , col + 1, m_expensesTable[0][col]);
+
+		index += 1;
+		sheet->writeNum(index, col + 1, m_balanceTable[0][col]);
+				
+	}
 
 
 }

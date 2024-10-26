@@ -9,6 +9,7 @@
 using namespace libxl;
 
 #define MAX_CANDIDATES 50
+#define MAX_DOING_TABLE_SIZE 10 //doing, done, deffer table 세로크기
 
 // Order Tabe index for easy reference
 enum OrderIndex {
@@ -169,9 +170,9 @@ public:
 		return *this;
 	}
 
-	void Clear() {
+	void Clear(int fill) {
 		for (auto& row : data) {
-			std::fill(row.begin(), row.end(), 0);
+			std::fill(row.begin(), row.end(), fill);
 		}
 	}
 
@@ -185,7 +186,7 @@ public:
 
 		int& operator[](int colIndex) {
 			if (colIndex >= array.data[rowIndex].size()) {
-				array.data[rowIndex].resize(colIndex + 1, 0);
+				array.data[rowIndex].resize(colIndex + 1, -1);
 			}
 			return array.data[rowIndex][colIndex];
 		}
@@ -201,7 +202,7 @@ public:
 	void Resize(int x, int y) {
 		data.resize(x);
 		for (int i = 0; i < x; ++i) {
-			data[i].resize(y, 0);
+			data[i].resize(y, -1);
 		}
 	}
 

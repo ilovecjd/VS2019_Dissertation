@@ -3,16 +3,11 @@
 #include "Creator.h"
 #include <cctype>   // toupper 함수를 사용하기 위해 필요
 
-
-
-
 CCreator::CCreator()
-{
-	
+{	
 }
 CCreator::CCreator(int count)
-{
-	countNPD = count;
+{	
 }
 
 CCreator::~CCreator()
@@ -20,22 +15,15 @@ CCreator::~CCreator()
 }
 
 // 문제를 생성한다. 글로벌 환경에서 발생 할 수 있는 프로젝트들을 발생 시키고 파일로 저장한다.
-//BOOL CCreator::Init(int type, int ID, int ODate, ALL_ACT_TYPE* pActType, ALL_ACTIVITY_PATTERN* pActPattern)
 BOOL CCreator::Init(GLOBAL_ENV* pGlobalEnv, ALL_ACT_TYPE* pActType, ALL_ACTIVITY_PATTERN* pActPattern)
 {	
 	*(&m_GlobalEnv) = *pGlobalEnv;
 	*(&m_ActType) = *pActType;
 	*(&m_ActPattern) = *pActPattern;
+
 	m_pProjects.Resize(0,10);
 
 	m_totalProjectNum = CreateAllProjects();
-
-	// 디버깅 정보를 출력한다.
-	//PrintProjectInfo();
-
-	//CreateOrderTable();//m_totalProjectNum 생성 (내부프로젝트 3개 만큼 크게)
-	//m_pProjects = new PROJECT[m_totalProjectNum];
-	//CreateProjects();
 
 	return TRUE;
 }
@@ -63,7 +51,6 @@ int CCreator::CreateAllProjects()
 		for (int i = 0; i < newCnt; i++) // 외부 프로젝트 발생
 		{
 			CraterExternalProject(prjectId++,week);
-
 		}
 	}
 
@@ -82,7 +69,7 @@ int CCreator::CreateInternalProject(int Id,int week)
 	Project.startAvail = week;  // 시작 가능일. 내부는 바로 진행가능
 	Project.runningWeeks = 0;		// 진행한 기간 (0: 미진행, 나머지: 진행한 기간)
 	Project.experience = ZeroOrOneByProb(95);	// 경험 (0: 무경험 1: 유경험)
-	Project.winProb = 100;		// 성공 확률 song ==> 추후 사용시 생성 방법을 결정한다. 현재는 100%
+	Project.winProb = 30;		// 성공 확률 song ==> 추후 사용시 생성 방법을 결정한다. 현재는 100%
 	Project.nCashFlows = MAX_N_CF;	// 비용 지급 횟수(규모에 따라 변경 가능)
 
 	CreateInternalActivities(&Project);					//m_activities[MAX_ACT] 계산
@@ -94,6 +81,7 @@ int CCreator::CreateInternalProject(int Id,int week)
 
 	return 0;
 }
+
 // 내부 프로젝트의 활동들을 생성한다.
 BOOL CCreator::CreateInternalActivities(PROJECT* pProject) {
 	//song 사용하지 않는 멤버 변수와 지역 변수들 삭제 하자	
@@ -106,14 +94,13 @@ BOOL CCreator::CreateInternalActivities(PROJECT* pProject) {
 	int tempDuration;
 
 	probability = rand() % 100; // 0부터 99 사이의 랜덤 정수 생성
-	
 
 	////////////////////////////////////////////
 	// 프로젝트 타입관련 정보	
 	pProject->projectType = 4;
 
 	//프로젝트 패턴 관련 정보
-	pProject->activityPattern = 5;
+	pProject->activityPattern = 4;
 
 	Lb = m_ActType.asIntArray[pProject->projectType][2];	// 엑셀 4열의 "최소기간"
 	UB = m_ActType.asIntArray[pProject->projectType][3];	// 엑셀 5열의 "최대기간"
@@ -121,7 +108,6 @@ BOOL CCreator::CreateInternalActivities(PROJECT* pProject) {
 	totalDuration = RandomBetween(Lb, UB);
 	pProject->duration = totalDuration;
 	pProject->endDate = pProject->startAvail + totalDuration - 1;// song??
-
 
 	Lb = 0;
 	UB = 0;
@@ -182,112 +168,9 @@ int CCreator::CraterExternalProject(int Id, int week)
 	Project.profit = CalculateHRAndProfit(&Project); // 총 수익을 계산한다.
 	CalculatePaymentSchedule(&Project);			//m_cashFlows[MAX_N_CF] 계산		
 
-
 	m_pProjects[0][Id] = Project;
 		
 	return 0;
-
-}
-
-/////////////////////////////////////////////////////////////////////////
-// 프로젝트 발주(발생) 현황 생성, 프로젝트는 최대 크기 만큼 설정한다.
-// 시뮬레이션보다 길게 작성한다.
-int CCreator::CreateOrderTable()
-{
-	int cnt = 0, sum = 0;
-
-	m_orderTable.Resize(2, m_GlobalEnv.maxWeek);
-
-	for (int week = 0; week < m_GlobalEnv.maxWeek; week++)
-	{
-		cnt = PoissonRandom(m_GlobalEnv.WeeklyProb);	// 이번주 발생하는 프로젝트 갯수		
-		m_orderTable[ORDER_SUM][week] = sum;			// 누계
-		m_orderTable[ORDER_ORD][week] = cnt;			// 발생 프로젝트갯수
-		sum = sum + cnt;	// 이번주 까지 발생한 프로젝트 갯수. 다음주에 기록된다.
-	}
-	//m_OutProjectNum = sum;
-	m_totalProjectNum = sum + countNPD;// +3;// 생성될 내부프로젝트 최대 갯수만큼 더한다.
-	return 0;
-}
-
-int CCreator::CreateProjects()
-{
-	int projectId = 0;
-	int startNum = 0;
-	int endNum = 0;
-	int preTotal = 0;
-
-	// 외부 프로젝트 생성
-	for (int week = 0; week < m_GlobalEnv.maxWeek; week++)
-	{
-		//preTotal = m_orderTable[ORDER_SUM][week];			// 지난주까지의 발주 프로젝트 누계
-		//startNum = preTotal + 1;						// 신규프로젝트이 시작번호 = 누계 +1
-		//endNum = preTotal + m_orderTable[ORDER_ORD][week];	// 마지막 프로젝트의 시작번호 = 지난주 누계 + 이번주 발생건수
-
-		//if ((startNum != 0) && (startNum <= endNum))
-		//{
-		//	for (projectId = startNum; projectId <= endNum; projectId++)
-		//	{
-		//		PROJECT* pProject;				
-		//		pProject =  &m_pProjects[projectId-1];
-		//		memset(pProject, 0, sizeof(struct PROJECT));
-
-		//		pProject->category = 0;		// 프로젝트 분류 (0: 외부 / 1: 내부)
-		//		pProject->ID = projectId;		// 프로젝트의 번호	
-		//		pProject->orderDate = week;	// 발주일
-		//		pProject->startAvail = week  + (rand() % 4);  // // 시작 가능일 ( 0에서 3 사이의 정수 난수 생성)
-		//		pProject->runningWeeks = 0;		// 진행 여부 (0: 미진행, 나머지: 진행시작한 주)
-		//		pProject->experience = ZeroOrOneByProb(95);	// 경험 (0: 무경험 1: 유경험)
-		//		pProject->winProb = 100;		// 성공 확률 song ==> 추후 사용시 생성 방법을 결정한다. 현재는 100%
-		//		pProject->nCashFlows = MAX_N_CF;	// 비용 지급 횟수(규모에 따라 변경 가능)
-
-		//		CreateActivities(pProject);					//m_activities[MAX_ACT] 계산
-		//		pProject->profit = CalculateHRAndProfit(pProject); // 총 수익을 계산한다.
-		//		CalculatePaymentSchedule(pProject);			//m_cashFlows[MAX_N_CF] 계산				
-		//	}
-		//}
-	}
-
-	// 내부 프로젝트 생성
-	for (int i = 0; i < countNPD; i++)
-	{	
-		//PROJECT* pProject;
-		//int duration = 40+i*4;  // 10개월, 11개월, 12개월
-		//int startDate = i * 4 * 12;
-
-		//projectId = m_OutProjectNum + 1 + i;
-		//pProject = &m_pProjects[projectId-1];
-		//memset(pProject, 0, sizeof(struct PROJECT));
-
-		//pProject->category = 1;		// 프로젝트 분류 (0: 외부 / 1: 내부)
-		//pProject->ID = projectId;		// 프로젝트의 번호	
-		//pProject->orderDate = startDate;	// 발주일
-		//pProject->startAvail = startDate; // 바로시작 가능
-		//pProject->runningWeeks = 0;		// 진행 여부 (0: 미진행, 나머지: 진행시작한 주)
-		//pProject->experience = ZeroOrOneByProb(95);	// 경험 (0: 무경험 1: 유경험)
-		//pProject->winProb = 30 + i*10;		// 성공 확률 song ==> 추후 사용시 생성 방법을 결정한다. 
-		//pProject->nCashFlows = 0;			// 비용 지급 횟수(규모에 따라 변경 가능)
-		//
-		//pProject->endDate = startDate + duration - 1;		// 프로젝트 종료일
-		//pProject->duration = duration;		// 프로젝트의 총 기간
-
-		////CalculatePaymentSchedule(pProject);			//m_cashFlows[MAX_N_CF] 계산	
-		//pProject->profit = m_GlobalEnv.Cash_Init /12/4;	// 주당 기대수익으로 변경
-		//													
-		////1CreateActivities(pProject);			//m_activities[MAX_ACT] 계산 // 활동
-		//pProject->numActivities = 1;          // 총 활동 수
-		//pProject->activities[0].activityType = 1;// 활동에 관한 정보를 기록하는 배열	
-		//pProject->activities[0].duration = duration;      // 활동 기간
-		//pProject->activities[0].startDate = startDate;     // 시작 날짜
-		//pProject->activities[0].endDate = startDate + duration - 1;       // 종료 날짜
-		//pProject->activities[0].highSkill = m_GlobalEnv.Hr_Init_H / 2;     // 높은 기술 수준 인력 수
-		//pProject->activities[0].midSkill = m_GlobalEnv.Hr_Init_H / 2;      // 중간 기술 수준 인력 수
-		//pProject->activities[0].lowSkill = m_GlobalEnv.Hr_Init_H / 2;      // 낮은 기술 수준 인력 수
-
-	}
-
-	return 0;
-
 }
 
 
@@ -410,11 +293,22 @@ int CCreator::CalculateHRAndProfit(PROJECT* pProject) {
 	if (1 == pProject->category)
 	{
 		pProject->activities[0].highSkill	= pProject->activities[0].highSkill + 1;
-		
-		pProject->activities[1].highSkill	= pProject->activities[1].highSkill + 1;
-		pProject->activities[1].midSkill	= pProject->activities[1].midSkill+1;
-		pProject->activities[1].lowSkill	= 1;
 
+		pProject->activities[1].highSkill = 1;// pProject->activities[1].highSkill + 1;
+		pProject->activities[1].midSkill = 1;// pProject->activities[1].midSkill + 1;
+		pProject->activities[1].lowSkill	= 0;
+
+
+		for (int i = 0; i < pProject->numActivities; ++i) {
+			if(pProject->activities[i].highSkill > m_GlobalEnv.Hr_Init_H)
+				pProject->activities[i].highSkill = m_GlobalEnv.Hr_Init_H;
+
+			if(pProject->activities[i].midSkill > m_GlobalEnv.Hr_Init_M)
+			pProject->activities[i].midSkill = m_GlobalEnv.Hr_Init_M;
+
+			if(pProject->activities[i].lowSkill > m_GlobalEnv.Hr_Init_L)
+			pProject->activities[i].lowSkill = m_GlobalEnv.Hr_Init_L;
+		}		
 	}
 
 	for (int i = 0; i < pProject->numActivities; ++i) {
@@ -578,10 +472,8 @@ void CCreator::CalculatePaymentSchedule(PROJECT* pProject) {
 	pProject->nCashFlows = totalPayments;
 }
 
-
 void CCreator::Save(CString filename)
 {
-
 	Book* book = xlCreateXMLBook();  // Use xlCreateBook() for xls format	
 
 	// 정품 키 값이 들어 있다. 공개하는 프로젝트에는 포함되어 있지 않다. 
@@ -590,13 +482,11 @@ void CCreator::Save(CString filename)
 	book->setKey(_LIBXL_NAME, _LIBXL_KEY);
 #endif
 
-
 	Sheet* projectSheet = nullptr;
 	Sheet* dashboardSheet = nullptr;
 
 	if (book->load(filename)) {
 		// File exists, check for specific sheets
-
 
 		for (int i = 0; i < book->sheetCount(); ++i) {
 			Sheet* sheet = book->getSheet(i);
@@ -623,7 +513,6 @@ void CCreator::Save(CString filename)
 		projectSheet = book->addSheet(L"project");  // Add and assign the 'project' sheet
 		dashboardSheet = book->addSheet(L"dashboard");  // Add and assign the 'dashboard' sheet
 	}
-
 
 	write_global_env(book, projectSheet,&m_GlobalEnv);
 	write_project_header(book, projectSheet);

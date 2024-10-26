@@ -25,18 +25,16 @@ public:
 	int m_lastDecisionWeek;
 	CString m_XlFileName;
 	
-
 	Dynamic2DArray m_totalHR;
 	int recruitTerm; // 인원 충감을 계산하는 기간 비율 (100/기간(week) 로 계산)	
-	int countNPD = 0;
-
+	
 private:
 	// 초기화 필요한 변수들
 	int m_totalProjectNum;
 
 	PROJECT* m_AllProjects = NULL;	
 
-	int* m_orderTable[2] = {NULL,NULL};
+	Dynamic2DArray m_orderTable;
 
 	Dynamic2DArray m_doingHR;
 	Dynamic2DArray m_freeHR;
@@ -48,6 +46,7 @@ private:
 		
 	Dynamic2DArray m_incomeTable;
 	Dynamic2DArray m_expensesTable;
+	Dynamic2DArray m_balanceTable;
 
 	
 	
@@ -62,12 +61,13 @@ private:
 	void AddProjectEntry(PROJECT* project, int addWeek);
 	void AddHR(int grade, int addWeek);
 	void RemoveHR(int grade, int addWeek);
+	void RemoveInternalProjectEntry(PROJECT* project, int thisWeek);
 
 	void CCompany::ReadOrder(FILE* fp);
 	void ReadProject(FILE* fp);
 
 
-	void RemoveInterProject(PROJECT* project, int addWeek);
+	void AddInternalProjectEntry(PROJECT* project, int addWeek);
 	
 }; 
 

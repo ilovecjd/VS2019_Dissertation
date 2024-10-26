@@ -63,8 +63,7 @@ CSimulatorDlg::CSimulatorDlg(CWnd* pParent /*=nullptr*/)
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 	m_pAutoProxy = nullptr;
-
-	//song !!!
+		
 	m_pGlobalEnv = new GLOBAL_ENV; //song delete는 소멸자에서
 	
 }
@@ -76,6 +75,9 @@ CSimulatorDlg::~CSimulatorDlg()
 	//  대화 상자가 삭제되었음을 알 수 있게 합니다.
 	if (m_pAutoProxy != nullptr)
 		m_pAutoProxy->m_pDialog = nullptr;
+
+	if (m_pGlobalEnv)
+		delete m_pGlobalEnv;
 }
 
 void CSimulatorDlg::DoDataExchange(CDataExchange* pDX)
@@ -256,7 +258,7 @@ void CSimulatorDlg::DefaultParameters(ALL_ACT_TYPE* act, ALL_ACTIVITY_PATTERN* p
 	m_pGlobalEnv->Hr_Init_M = hr_m;
 	m_pGlobalEnv->Hr_Init_L = hr_l;
 	m_pGlobalEnv->Hr_LeadTime = 4;
-	m_pGlobalEnv->Cash_Init = (50 * hr_h + 39 * hr_m + 25 * hr_l) * 4 * 6 * 1.2; //인원수 대비 6개월;
+	m_pGlobalEnv->Cash_Init = (50 * hr_h + 39 * hr_m + 25 * hr_l) * 4 * 12 * 1.2; //인원수 대비 12개월;
 	m_pGlobalEnv->ProblemCnt = 100;
 	m_pGlobalEnv->selectOrder = 1;	// 선택 순서  1: 먼저 발생한 순서대로 2: 금액이 큰 순서대로 3: 금액이 작은 순서대로
 	m_pGlobalEnv->recruit = 4 * 6;		// 충원에 필요한 운영비 (몇주분량인가?)
@@ -279,9 +281,10 @@ void CSimulatorDlg::OnBnClickedCreateProject()
 	ALL_ACTIVITY_PATTERN* patternTemp = new ALL_ACTIVITY_PATTERN;
 	DefaultParameters(actTemp, patternTemp);
 
-	//CCreator Creator; 
-	//Creator.Init(m_pGlobalEnv, actTemp, patternTemp);
 	CString strFileName = _T("d:/test/test.xlsx");
+
+	//CCreator Creator; 
+	//Creator.Init(m_pGlobalEnv, actTemp, patternTemp);	
 	//Creator.Save(strFileName);
 	
 	CCompany* company = new CCompany;
@@ -291,13 +294,13 @@ void CSimulatorDlg::OnBnClickedCreateProject()
 	int k = 0;
 	while (k < m_pGlobalEnv->SimulationWeeks)
 	{
+		//company->PrintCompanyResualt();
 		if (FALSE == company->Decision(k))  // j번째 기간에 결정해야 할 일들		
 			k = 9999; //m_pGlobalEnv->SimulationWeeks + 1;
 
 		k++;
 	}
 	company->PrintCompanyResualt();
-
 
 	delete actTemp;
 	delete patternTemp;

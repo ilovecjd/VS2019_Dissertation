@@ -6,8 +6,6 @@
 #include <filesystem>
 #include <string>
 
-
-
 class CCreator
 {
 public:
@@ -18,26 +16,19 @@ public:
 	// song
 public :
 	
-	int m_totalProjectNum;
-	//int m_OutProjectNum;
+	int m_totalProjectNum;	
 	Dynamic2DArray m_orderTable;
-	//PRJ_VAR prj_var;
 	
-	BOOL Init(GLOBAL_ENV* pGlobalEnv, ALL_ACT_TYPE* pActType, ALL_ACTIVITY_PATTERN* pActPattern);
-	//BOOL Init(int type, int ID, int ODate, ALL_ACT_TYPE* pActType, ALL_ACTIVITY_PATTERN* pActPattern);
+	BOOL Init(GLOBAL_ENV* pGlobalEnv, ALL_ACT_TYPE* pActType, ALL_ACTIVITY_PATTERN* pActPattern);	
 	void Save(CString filename);
 	void Load(CString filename);
-	int countNPD = 0;
-
-
+	
 private:	
 	GLOBAL_ENV m_GlobalEnv;
 	ALL_ACT_TYPE m_ActType;
 	ALL_ACTIVITY_PATTERN m_ActPattern;
 	DynamicProjectArray m_pProjects;
 
-
-	
 	int CreateOrderTable();
 	int CreateProjects();
 	BOOL CreateActivities(PROJECT* pProject);
@@ -48,7 +39,6 @@ private:
 
 	void WriteProjet(FILE* fp);
 
-
 	int CreateAllProjects();
 	int CreateInternalProject(int Id, int week);
 	int CraterExternalProject(int Id, int week);
@@ -57,4 +47,3 @@ private:
 public:
 	void PrintProjectInfo();
 };
-
