@@ -53,7 +53,8 @@ private:
 	BOOL CheckLastWeek(int thisWeek);
 	void SelectCandidates(int thisWeek);
 	BOOL IsEnoughHR(int thisWeek, PROJECT* project);
-	BOOL IsInternalEnoughHR(int thisWeek, PROJECT* project); // 내부 프로젝트 인원 체크			
+	BOOL IsInternalEnoughHR(int thisWeek, PROJECT* project); // 내부 프로젝트 인원 체크	
+	BOOL IsIntenalEnoughtNextWeekHR(int thisWeek, PROJECT* project);// 이번주 내부 프로젝트 인원 체크	
 	void SelectNewProject(int thisWeek);
 	
 

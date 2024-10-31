@@ -164,13 +164,14 @@ BOOL CCompany::Decision(int thisWeek ) {
 		return FALSE;
 	}
 
+	
 	// 2. 진행 가능한 후보프로젝트들을  candidateTable에 모은다
 	SelectCandidates(thisWeek);
 
 	// 3. 신규 프로젝트 선택 및 진행프로젝트 업데이트
 	// 이번주에 발주된 프로젝트중 시작할 것이 있으면 진행 프로젝트로 기록
 	SelectNewProject(thisWeek);
-
+	
 	//PrintDBData();
 	return TRUE;
 }
@@ -224,8 +225,8 @@ BOOL CCompany::CheckLastWeek(int thisWeek)
 				}
 			}
 			else {
-				// 2. 진행중이면 내부프로젝트는 이번주부터 시작 가능 으로 표시하고				
-				project->startAvail = thisWeek;	
+				// 2. 진행중이면 내부프로젝트는 이번주부터 시작 가능 으로 표시하고				// 이것도 필요 없음. 진행 정도를 기준으로 파악하자
+				//project->startAvail = thisWeek;	
 				// 내부 프로젝트의 인력 테이블 조정
 				RemoveInternalProjectEntry(project, thisWeek);
 			}
@@ -365,7 +366,12 @@ void CCompany::SelectCandidates(int thisWeek)
 				if (project->duration > project->runningWeeks) { // 완료되지 않은 내부프로젝트
 					if (IsInternalEnoughHR(thisWeek, project)) // 내부 프로젝트 인원 체크			
 						m_candidateTable[j++] = project->ID;
-				}
+					else {
+						if (IsIntenalEnoughtNextWeekHR(thisWeek, project)) {// 내부 프로젝트는 전체 진행에 인원이 모자라도 다음주에만 진행 가능해도 인력 배치한다.
+							m_candidateTable[j++] = project->ID;
+						}
+					}
+				}				
 			}
 		}
 		else if(project->orderDate == thisWeek) // 이번주 발생 프로젝트
@@ -409,7 +415,65 @@ void CCompany::SelectCandidates(int thisWeek)
 //}
 
 
-// 다음주에 내부 프로젝트를 위해 투입할 인원 체크
+// 이번주!! 내부 프로젝트를 위해 투입할 인원 체크
+BOOL CCompany::IsIntenalEnoughtNextWeekHR(int thisWeek, PROJECT* project)
+{
+	//project->runningWeeks => 현재가지 진행된 week 수. 0 이면 시작안한 상태
+	int runningWeeks = project->runningWeeks;
+	int startAvail = project->startAvail;
+
+	//song  !!!! int gap = thisWeek - startAvail  - runningWeeks; 값들간에 문제는 없는지 체크
+	// 밀린 시간 = 경과 시간 - 진행한 시간
+	// 경과 시간 = 현재 시각 - 시작 가능 시작
+	int gap = thisWeek - startAvail - runningWeeks;
+
+	// 예외를 위해서 메세지 박스를 띄운다. 디버깅용
+
+	// Activity들의 원본은 그대로 두고 복사해온 곳에 밀린만큼 모든 기간을 수정한다.
+	int numAct = project->numActivities;
+	Dynamic2DArray doingHR = m_doingHR;
+
+	PACTIVITY pActivity = new ACTIVITY[numAct];
+
+	for (int i = 0; i < numAct; i++)
+	{
+		pActivity[i] = project->activities[i];
+		pActivity[i].startDate += gap;
+		pActivity[i].endDate += gap;
+
+		int startDate = pActivity[i].startDate;
+		int endDate = pActivity[i].endDate;
+
+		for (int j = startDate; j <= endDate; j++)
+		{
+			if (j == thisWeek) // 
+			{
+				doingHR[HR_HIG][j] += pActivity[i].highSkill;
+				doingHR[HR_MID][j] += pActivity[i].midSkill;
+				doingHR[HR_LOW][j] += pActivity[i].lowSkill;
+
+				if (m_totalHR[HR_HIG][j] < doingHR[HR_HIG][j]) {
+					delete[] pActivity;
+					return FALSE;
+				}
+				if (m_totalHR[HR_MID][j] < doingHR[HR_MID][j]) {
+					delete[] pActivity;
+					return FALSE;
+				}
+				if (m_totalHR[HR_LOW][j] < doingHR[HR_LOW][j]) {
+					delete[] pActivity;
+					return FALSE;
+				}
+			}
+		}
+	}
+
+	delete[] pActivity;	
+
+	return TRUE;
+}
+
+// 내부 프로젝트를 위해 투입할 인원 체크
 BOOL CCompany::IsInternalEnoughHR(int thisWeek, PROJECT* project)
 {
 	//project->runningWeeks => 현재가지 진행된 week 수. 0 이면 시작안한 상태
@@ -462,11 +526,10 @@ BOOL CCompany::IsInternalEnoughHR(int thisWeek, PROJECT* project)
 		}
 	}
 
-	delete[] pActivity;	
+	delete[] pActivity;
 
 	return TRUE;
 }
-
 
 BOOL CCompany::IsEnoughHR(int thisWeek, PROJECT* project)
 {
@@ -588,7 +651,13 @@ void CCompany::SelectNewProject(int thisWeek)
 		{
 			if (IsInternalEnoughHR(thisWeek, project))
 			{
+				//if (2 <= (thisWeek%3))// 임시 검증코드 중간에 멈추면
 				AddInternalProjectEntry(project, thisWeek);
+			}
+			else {
+				if (IsIntenalEnoughtNextWeekHR(thisWeek, project)) {// 내부 프로젝트는 전체 진행에 인원이 모자라도 다음주에만 진행 가능해도 인력 배치한다.
+					AddInternalProjectEntry(project, thisWeek);
+				}
 			}
 		}
 		
@@ -600,7 +669,7 @@ void CCompany::SelectNewProject(int thisWeek)
 void CCompany::AddProjectEntry(PROJECT* project,  int addWeek)
 {	
 	//song !!!runningWeeks 함수내 모두 확인 바람
-	project->runningWeeks = project->startAvail;
+	//project->runningWeeks = project->startAvail;//필요 없다.
 
 	// HR 정보 업데이트
 	// 2중 루프 activity->기간-> 등급업데이트 순서로 activity들을 순서대로 가져온다.
@@ -629,17 +698,17 @@ void CCompany::AddProjectEntry(PROJECT* project,  int addWeek)
 	// 수입 테이블 업데이트. 지출은 인원 관리쪽에서 한다.	
 	int incomeDate;
 
-	if (project->runningWeeks <addWeek)
+	/*if (project->runningWeeks <addWeek)
 	{
 		MessageBox(NULL, _T("m_runningWeeks miss"), _T("Error"), MB_OK | MB_ICONERROR);
-	}
-	incomeDate = project->runningWeeks + project->firstPayMonth;	// 선금 지급일
+	}*/
+	incomeDate = project->startAvail + project->firstPayMonth;	// 선금 지급일
 	m_incomeTable[0][incomeDate] += project->firstPay;
 	
-	incomeDate = project->runningWeeks + project->secondPayMonth;	// 2차 지급일
+	incomeDate = project->startAvail + project->secondPayMonth;	// 2차 지급일
 	m_incomeTable[0][incomeDate] += project->secondPay;
 
-	incomeDate = project->runningWeeks + project->finalPayMonth;	// 3차 지급일
+	incomeDate = project->startAvail + project->finalPayMonth;	// 3차 지급일
 	m_incomeTable[0][incomeDate] += project->finalPay;
 }
 
@@ -838,10 +907,10 @@ void CCompany::PrintCompanyResualt()
 
 	// 정품 키 값이 들어 있다. 공개하는 프로젝트에는 포함되어 있지 않다. 
 	// 정품 키가 없으면 읽기가 300 컬럼으로 제한된다.
-#ifdef INCLUDE_LIBXL_KET
+#ifdef INCLUDE_LIBXL_KET	
 	book->setKey(_LIBXL_NAME, _LIBXL_KEY);
 #endif	
-
+	
 	Sheet* resultSheet = nullptr;
 
 	if (book->load((LPCWSTR)m_XlFileName)) {
@@ -879,8 +948,7 @@ void CCompany::write_CompanyInfo(Book* book, Sheet* sheet)
 	draw_outer_border(book, sheet, index, 0, index + 2, m_GlobalEnv.SimulationWeeks, BORDERSTYLE_THIN, COLOR_BLACK);
 	sheet->writeStr(index++, 0, _T("주"));
 	sheet->writeStr(index++, 0, _T("누계"));
-	sheet->writeStr(index++, 0, _T("발주"));
-	
+	sheet->writeStr(index++, 0, _T("발주"));	
 
 	for (int col = 0; col < m_GlobalEnv.SimulationWeeks; ++col) {
 		sheet->writeNum(1, col+1, col);
@@ -890,14 +958,12 @@ void CCompany::write_CompanyInfo(Book* book, Sheet* sheet)
 		sheet->writeNum(20, col + 1, col);// 21행에도 몇주인지 적어 주자.
 	}
 
-
 	index = 5; // 엑셀의 6행 부터 기록	
 	draw_outer_border(book, sheet, index+1, 0, index + 3, m_GlobalEnv.SimulationWeeks, BORDERSTYLE_THIN, COLOR_BLACK);
 	sheet->writeStr(index++, 0, _T("투입"));
 	sheet->writeStr(index++, 0, _T("H"));
 	sheet->writeStr(index++, 0, _T("M"));
-	sheet->writeStr(index++, 0, _T("L"));
-	
+	sheet->writeStr(index++, 0, _T("L"));	
 
 	index = 10; // 엑셀의 11행 부터 기록
 	draw_outer_border(book, sheet, index + 1, 0, index + 3, m_GlobalEnv.SimulationWeeks, BORDERSTYLE_THIN, COLOR_BLACK);
@@ -905,15 +971,13 @@ void CCompany::write_CompanyInfo(Book* book, Sheet* sheet)
 	sheet->writeStr(index++, 0, _T("H"));
 	sheet->writeStr(index++, 0, _T("M"));
 	sheet->writeStr(index++, 0, _T("L"));
-	
-	
+		
 	index = 15; // 엑셀의 16행 부터 기록
 	draw_outer_border(book, sheet, index + 1, 0, index + 3, m_GlobalEnv.SimulationWeeks, BORDERSTYLE_THIN, COLOR_BLACK);
 	sheet->writeStr(index++, 0, _T("총원"));
 	sheet->writeStr(index++, 0, _T("H"));
 	sheet->writeStr(index++, 0, _T("M"));
-	sheet->writeStr(index++, 0, _T("L"));
-	
+	sheet->writeStr(index++, 0, _T("L"));	
 
 	for (int col = 0; col < m_GlobalEnv.SimulationWeeks; ++col) {
 
@@ -927,13 +991,11 @@ void CCompany::write_CompanyInfo(Book* book, Sheet* sheet)
 		sheet->writeNum(index++, col + 1, m_freeHR[HR_MID][col]);
 		sheet->writeNum(index++, col + 1, m_freeHR[HR_LOW][col]);
 
-
 		index = 16; // 엑셀의 17행 부터 기록 ("총원")
 		sheet->writeNum(index++, col + 1, m_totalHR[HR_HIG][col]);
 		sheet->writeNum(index++, col + 1, m_totalHR[HR_MID][col]);
 		sheet->writeNum(index++, col + 1, m_totalHR[HR_LOW][col]);
 	}
-
 
 	for (int col = 0; col < m_GlobalEnv.SimulationWeeks; ++col) {
 
@@ -958,9 +1020,6 @@ void CCompany::write_CompanyInfo(Book* book, Sheet* sheet)
 		sheet->writeNum(index , col + 1, m_expensesTable[0][col]);
 
 		index += 1;
-		sheet->writeNum(index, col + 1, m_balanceTable[0][col]);
-				
+		sheet->writeNum(index, col + 1, m_balanceTable[0][col]);				
 	}
-
-
 }

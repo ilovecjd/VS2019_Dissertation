@@ -14,11 +14,9 @@
 
 #include <xlnt/xlnt.hpp>
 
-
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
-
 
 // 응용 프로그램 정보에 사용되는 CAboutDlg 대화 상자입니다.
 
@@ -294,10 +292,9 @@ void CSimulatorDlg::OnBnClickedCreateProject()
 	int k = 0;
 	while (k < m_pGlobalEnv->SimulationWeeks)
 	{
-		//company->PrintCompanyResualt();
 		if (FALSE == company->Decision(k))  // j번째 기간에 결정해야 할 일들		
 			k = 9999; //m_pGlobalEnv->SimulationWeeks + 1;
-
+		//company->PrintCompanyResualt();
 		k++;
 	}
 	company->PrintCompanyResualt();
@@ -308,8 +305,6 @@ void CSimulatorDlg::OnBnClickedCreateProject()
 
 	return ;
 }
-
-
 
 void CSimulatorDlg::OnBnClickedSimulation()
 {
