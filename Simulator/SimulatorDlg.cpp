@@ -402,7 +402,7 @@ void CSimulatorDlg::OnBnClickedCreateProject()
 	CString strOutSheetName;
 	CString strResultSheetName = _T("result");;
 
-	for (int i  = 0; i < 10; i++)
+	for (int i  = 0; i < m_ProblemCnt; i++)
 	{		
 		strInSheetName.Format(_T("In%03d"),i);
 		strOutSheetName.Format(_T("Out%03d"), i);
@@ -566,7 +566,7 @@ void CSimulatorDlg::OnBnClickedClearXl()
 #endif	
 	if (book->load((LPCWSTR)m_strFileName))
 	{
-		for (int i = 0; i < 100; i++)
+		for (int i = 0; i < m_ProblemCnt; i++)
 		{
 			strOutSheetName.Format(_T("Out%03d"), i);
 			// 시트 이름과 일치하는 모든 시트 찾아 삭제

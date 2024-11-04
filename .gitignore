@@ -36,3 +36,4 @@ Simulator/hidden_libxl.h
 *.VC.db
 /Simulator/.vs/Simulator/v16
 /Simulator/x64/Debug
+/Simulator/x64/Release
