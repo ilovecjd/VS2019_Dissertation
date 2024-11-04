@@ -50,11 +50,28 @@ public:
 
 //song
 public:
-	void DefaultParameters(ALL_ACT_TYPE* act, ALL_ACTIVITY_PATTERN* pattern);
+	void GetMainParameters(ALL_ACT_TYPE* act, ALL_ACTIVITY_PATTERN* pattern);
+	void MakeProjectAndRun(CString strFileName, CString strInSheetName, CString strOutSheetName);
+	void OnlyRun(CString strFileName, CString strInSheetName, CString strOutSheetName);
+	void MakeResult(CString strFileName, CString  strResultSheetName, CString  strOutSheetName, int num);
 	GLOBAL_ENV* m_pGlobalEnv;
 	afx_msg void OnBnClickedSimulation();
 
 
+
 	//song
 private:	
+	CString m_strFileName;
+	int m_ProblemCnt = 100;
+	CString m_strComment;
+
+	void MakePath();
+	BOOL CreateDirectoryRecursively(const CString& strPath);
+
+public:
+	afx_msg void OnBnClickedClearXl();
+	afx_msg void OnBnClickedOnlyRun();	
+	afx_msg void OnBnClickedButton2();
+	afx_msg void OnBnClickedChangeFolder();
+	afx_msg void OnEnChangeEdit13();
 };

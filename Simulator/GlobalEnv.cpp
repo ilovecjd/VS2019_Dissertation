@@ -269,6 +269,8 @@ void draw_outer_border(Book* book, Sheet* sheet, int startRow, int startCol, int
 	if (!book || !sheet || startRow > endRow || startCol > endCol)
 		return;
 
+	return; // libxl 에서 회신이 올때까지는 동작 시키지 말자
+
 	// 각 면과 모서리의 테두리를 위한 포맷 생성
 	Format* topFormat = book->addFormat();
 	Format* bottomFormat = book->addFormat();
@@ -388,10 +390,6 @@ void draw_all_borders(Book* book, Sheet* sheet, int startRow, int startCol, int 
 {
 	if (!book || !sheet || startRow > endRow || startCol > endCol)
 		return;  // 유효성 검사
-
-	Format* format = book->addFormat();
-	format->setBorder(borderStyle);
-	format->setBorderColor(borderColor);
 
 	for (int row = startRow; row <= endRow; ++row)
 	{

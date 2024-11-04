@@ -90,6 +90,9 @@ BEGIN_MESSAGE_MAP(CSimulatorDlg, CDialogEx)
 	ON_WM_QUERYDRAGICON()	
 	ON_BN_CLICKED(IDC_CREATE_PROJECT, &CSimulatorDlg::OnBnClickedCreateProject)
 	ON_BN_CLICKED(IDC_SIMULATION, &CSimulatorDlg::OnBnClickedSimulation)
+	ON_BN_CLICKED(IDC_CLEAR_XL, &CSimulatorDlg::OnBnClickedClearXl)
+	ON_BN_CLICKED(IDC_ONLY_RUN, &CSimulatorDlg::OnBnClickedOnlyRun)	
+	ON_BN_CLICKED(IDC_CHANGE_FOLDER, &CSimulatorDlg::OnBnClickedChangeFolder)
 END_MESSAGE_MAP()
 
 
@@ -125,10 +128,71 @@ BOOL CSimulatorDlg::OnInitDialog()
 	SetIcon(m_hIcon, FALSE);		// 작은 아이콘을 설정합니다.
 
 	// TODO: 여기에 추가 초기화 작업을 추가합니다.
-	// 우선은 동일한 랜덤값으로 프로젝트 생성을 검증해 놓고 
-	// 이 이후에 사용하자. 
-	// srand(static_cast<unsigned int>(time(nullptr)));
 
+	int SimulationWeeks = 52 * 5;		// 52주 x 5년	
+	int hr_h = 3;
+	int hr_m = 2;
+	int hr_l = 1;
+
+	m_pGlobalEnv->SimulationWeeks = SimulationWeeks;
+	SetDlgItemInt(IDC_SIMWEEKS, m_pGlobalEnv->SimulationWeeks);
+
+	m_pGlobalEnv->maxWeek = SimulationWeeks + 80;	//  maxTableSize 최대 80주(18개월)간 진행되는 프로젝트를 시뮬레이션 마지막에 기록할 수도 있다.
+	SetDlgItemInt(IDC_MAX_WEEKS, m_pGlobalEnv->maxWeek);
+
+	m_pGlobalEnv->WeeklyProb = 1.25;
+	SetDlgItemText(IDC_WEEKLY_PROB, _T("1.25"));
+
+	m_pGlobalEnv->Hr_Init_H = hr_h;
+	SetDlgItemInt(IDC_HR_H, m_pGlobalEnv->Hr_Init_H);
+	
+	m_pGlobalEnv->Hr_Init_M = hr_m;
+	SetDlgItemInt(IDC_HR_M, m_pGlobalEnv->Hr_Init_M);
+
+	m_pGlobalEnv->Hr_Init_L = hr_l;
+	SetDlgItemInt(IDC_HR_L, m_pGlobalEnv->Hr_Init_L);
+
+	m_pGlobalEnv->Hr_LeadTime = 4;
+	SetDlgItemInt(IDC_LEAD_TIME, m_pGlobalEnv->Hr_LeadTime);
+
+	m_pGlobalEnv->Cash_Init = (50 * hr_h + 39 * hr_m + 25 * hr_l) * 4 * 12 * 1.2; //인원수 대비 12개월;
+	SetDlgItemInt(IDC_CASH, m_pGlobalEnv->Cash_Init);
+
+	m_pGlobalEnv->ProblemCnt = 100;
+	SetDlgItemInt(IDC_PROBLEM_CNT, m_pGlobalEnv->ProblemCnt);
+
+	m_pGlobalEnv->selectOrder = 1;	// 선택 순서  1: 먼저 발생한 순서대로 2: 금액이 큰 순서대로 3: 금액이 작은 순서대로
+	SetDlgItemInt(IDC_ORDER, m_pGlobalEnv->selectOrder);
+
+	m_pGlobalEnv->recruit = 160;  // 작을수록 공격적인 인원 충원 144 : 시뮬레이션 끝까지 충원 없음
+	SetDlgItemInt(IDC_RECRUIT, m_pGlobalEnv->recruit);
+
+	m_pGlobalEnv->layoff = 0;  // 클수록 공격적인 인원 감축, 0 : 부도까지 인원 유지
+	SetDlgItemInt(IDC_LAY_OFF, m_pGlobalEnv->layoff);
+
+	m_pGlobalEnv->ExpenseRate = 1.2;
+	SetDlgItemText(IDC_EXP_RATE, _T("1.2"));
+
+
+
+
+	srand(static_cast<unsigned int>(time(nullptr)));
+	CString m_strFolderPath = _T("c:/ahnLab/");
+	SetDlgItemText(IDC_SAVE_PATH, m_strFolderPath);
+
+	// 현재 시간을 가져와 원하는 형식으로 파일명을 생성합니다
+	CTime currentTime = CTime::GetCurrentTime();
+	CString fileName;
+	fileName.Format(_T("%02d%02d%02d%02d_save.xlsm"),
+		currentTime.GetMonth(),
+		currentTime.GetDay(),
+		currentTime.GetHour(),
+		currentTime.GetMinute());
+
+	SetDlgItemText(IDC_SAVE_FILE, fileName);
+
+	SetDlgItemInt(IDC_PROBLEM_CNT,100);
+	
 	return TRUE;  // 포커스를 컨트롤에 설정하지 않으면 TRUE를 반환합니다.
 }
 
@@ -220,7 +284,7 @@ BOOL CSimulatorDlg::CanExit()
 }
 
 
-void CSimulatorDlg::DefaultParameters(ALL_ACT_TYPE* act, ALL_ACTIVITY_PATTERN* pattern)
+void CSimulatorDlg::GetMainParameters(ALL_ACT_TYPE* act, ALL_ACTIVITY_PATTERN* pattern)
 {
 	//PALL_ACT_TYPE pActType = new ALL_ACT_TYPE;
 	int actTemp[] = {	
@@ -244,111 +308,399 @@ void CSimulatorDlg::DefaultParameters(ALL_ACT_TYPE* act, ALL_ACTIVITY_PATTERN* p
 	*act = *((ALL_ACT_TYPE*)actTemp);
 	*pattern = *((ALL_ACTIVITY_PATTERN*)patternTemp);
 
-	int SimulationWeeks = 52 * 5;		// 52주 x 5년
-	int hr_h = 3;
-	int hr_m = 2;
-	int hr_l = 1;
+	m_pGlobalEnv->SimulationWeeks = GetDlgItemInt(IDC_SIMWEEKS);
+	m_pGlobalEnv->maxWeek = GetDlgItemInt(IDC_MAX_WEEKS);
 
-	m_pGlobalEnv->SimulationWeeks = SimulationWeeks;
-	m_pGlobalEnv->maxWeek = SimulationWeeks + 80;	//  maxTableSize 최대 80주(18개월)간 진행되는 프로젝트를 시뮬레이션 마지막에 기록할 수도 있다.
-	m_pGlobalEnv->WeeklyProb = 1.25;
-	m_pGlobalEnv->Hr_Init_H = hr_h;
-	m_pGlobalEnv->Hr_Init_M = hr_m;
-	m_pGlobalEnv->Hr_Init_L = hr_l;
-	m_pGlobalEnv->Hr_LeadTime = 4;
-	m_pGlobalEnv->Cash_Init = (50 * hr_h + 39 * hr_m + 25 * hr_l) * 4 * 12 * 1.2; //인원수 대비 12개월;
-	m_pGlobalEnv->ProblemCnt = 100;
-	m_pGlobalEnv->selectOrder = 1;	// 선택 순서  1: 먼저 발생한 순서대로 2: 금액이 큰 순서대로 3: 금액이 작은 순서대로
-	m_pGlobalEnv->recruit = 4 * 6;		// 충원에 필요한 운영비 (몇주분량인가?)
-	m_pGlobalEnv->layoff = 0;			// 감원에 필요한 운영비 (몇주분량인가?)
+	CString strTemp; 
+	GetDlgItemText(IDC_WEEKLY_PROB, strTemp);
+	m_pGlobalEnv->WeeklyProb = _wtof(strTemp.GetString());
 
-	m_pGlobalEnv->ExpenseRate = 1.2;
-	m_pGlobalEnv->selectOrder = 0; //선택 순서  1: 먼저 발생한 순서대로 2 : 금액이 큰 순서대로 3 : 금액이 작은 순서대로
+	m_pGlobalEnv->Hr_Init_H = GetDlgItemInt(IDC_HR_H);
+	m_pGlobalEnv->Hr_Init_M = GetDlgItemInt(IDC_HR_M);
+	m_pGlobalEnv->Hr_Init_L = GetDlgItemInt(IDC_HR_L);
+	m_pGlobalEnv->Hr_LeadTime = GetDlgItemInt(IDC_LEAD_TIME);
 
-	m_pGlobalEnv->recruit = 160;  // 작을수록 공격적인 인원 충원 144 : 시뮬레이션 끝까지 충원 없음
-	m_pGlobalEnv->layoff = 0;  // 클수록 공격적인 인원 감축, 0 : 부도까지 인원 유지
+	m_pGlobalEnv->Cash_Init = GetDlgItemInt(IDC_CASH);
+	m_pGlobalEnv->ProblemCnt = GetDlgItemInt(IDC_PROBLEM_CNT);
+	m_pGlobalEnv->selectOrder = GetDlgItemInt(IDC_ORDER);
+
+	m_pGlobalEnv->recruit = GetDlgItemInt(IDC_RECRUIT);
+	m_pGlobalEnv->layoff = GetDlgItemInt(IDC_LAY_OFF);
+
+	GetDlgItemText(IDC_EXP_RATE, strTemp);
+	m_pGlobalEnv->ExpenseRate = _wtof(strTemp.GetString());
+	
+	GetDlgItemText(IDC_COMMENT,m_strComment);
+
 }
 
-
-
-void CSimulatorDlg::OnBnClickedCreateProject()
-{
-	// TODO: 여기에 컨트롤 알림 처리기 코드를 추가합니다.
-
+void CSimulatorDlg::OnlyRun(CString strFileName, CString strInSheetName, CString strOutSheetName)
+{	
 	ALL_ACT_TYPE* actTemp = new ALL_ACT_TYPE;
 	ALL_ACTIVITY_PATTERN* patternTemp = new ALL_ACTIVITY_PATTERN;
-	DefaultParameters(actTemp, patternTemp);
+	GetMainParameters(actTemp, patternTemp);
 
-	CString strFileName = _T("d:/test/test.xlsx");
-
-	//CCreator Creator; 
-	//Creator.Init(m_pGlobalEnv, actTemp, patternTemp);	
-	//Creator.Save(strFileName);
-	
 	CCompany* company = new CCompany;
-	company->Init(strFileName);
-	//company->ReInit();
+	company->Init(strFileName, strInSheetName);
+	company->m_GlobalEnv.layoff = 20;
+	company->m_GlobalEnv.recruit = 20;
 
 	int k = 0;
 	while (k < m_pGlobalEnv->SimulationWeeks)
 	{
-		if (FALSE == company->Decision(k))  // j번째 기간에 결정해야 할 일들		
-			k = 9999; //m_pGlobalEnv->SimulationWeeks + 1;
-		//company->PrintCompanyResualt();
+		if (FALSE == company->Decision(k))  // j번째 기간에 결정해야 할 일들
+			k = 9999;
 		k++;
 	}
-	company->PrintCompanyResualt();
+	company->PrintCompanyResualt(strFileName, strOutSheetName);
 
 	delete actTemp;
 	delete patternTemp;
 	delete company;
 
-	return ;
+	return;
 }
+
+
+void CSimulatorDlg::MakeProjectAndRun(CString strFileName, CString strInSheetName, CString strOutSheetName)
+{
+	ALL_ACT_TYPE* actTemp = new ALL_ACT_TYPE;
+	ALL_ACTIVITY_PATTERN* patternTemp = new ALL_ACTIVITY_PATTERN;
+	GetMainParameters(actTemp, patternTemp);
+
+	CCreator Creator;
+	Creator.Init(m_pGlobalEnv, actTemp, patternTemp);
+	Creator.Save(strFileName, strInSheetName);
+
+	CCompany* company = new CCompany;
+	company->Init(strFileName, strInSheetName);
+	
+	int k = 0;
+	while (k < m_pGlobalEnv->SimulationWeeks)
+	{
+		if (FALSE == company->Decision(k))  // j번째 기간에 결정해야 할 일들
+			k = 9999; 
+		//company->PrintCompanyResualt();
+		k++;
+	}
+	company->PrintCompanyResualt(strFileName, strOutSheetName);
+
+	delete actTemp;
+	delete patternTemp;
+	delete company;
+
+	return;
+}
+
+
+void CSimulatorDlg::OnBnClickedCreateProject()
+{
+	// TODO: 여기에 컨트롤 알림 처리기 코드를 추가합니다.
+	//CString strFileName = _T("d:/test/imsi001.xlsm");
+	MakePath();
+	CString strInSheetName;
+	CString strOutSheetName;
+	CString strResultSheetName = _T("result");;
+
+	for (int i  = 0; i < 10; i++)
+	{		
+		strInSheetName.Format(_T("In%03d"),i);
+		strOutSheetName.Format(_T("Out%03d"), i);
+
+		MakeProjectAndRun(m_strFileName, strInSheetName, strOutSheetName);
+		MakeResult(m_strFileName, strResultSheetName, strOutSheetName, i);
+	}	
+}
+void CSimulatorDlg::MakeResult(CString strFileName, CString  strResultSheetName, CString  strOutSheetName, int num)
+{
+	Book* book = xlCreateXMLBook();  // Use xlCreateBook() for xls format	
+	Sheet* resultSheet = nullptr;
+	Sheet* outSheet = nullptr;
+#ifdef INCLUDE_LIBXL_KET	
+	book->setKey(_LIBXL_NAME, _LIBXL_KEY);
+#endif
+
+	if (book->load((LPCWSTR)strFileName)) {
+
+		int sheetCount = book->sheetCount();
+
+		for (int i = 0; i < sheetCount; ++i) 
+		{
+			Sheet* sheet = book->getSheet(i);
+
+			if (sheet) {
+				if (wcscmp(sheet->name(), (LPCWSTR)strResultSheetName) == 0) {
+					resultSheet = sheet;
+				}
+				else if (wcscmp(sheet->name(), (LPCWSTR)strOutSheetName) == 0) {
+					outSheet = sheet;
+				}
+			}
+			if (resultSheet && outSheet) break; // 둘 다 찾았으면 루프 종료
+		}
+
+		// outSheet가 없으면 에러 처리
+		if (!outSheet ) {
+			AfxMessageBox(_T("Result sheet not found."));
+			book->release();
+			return;
+		}
+
+		// resultSheet가 없으면 새로 생성
+		if (!resultSheet) {
+			resultSheet = book->addSheet((LPCWSTR)strResultSheetName);
+			if (!resultSheet) {
+				AfxMessageBox(_T("Failed to create new result sheet."));
+				book->release();
+				return;
+			}
+		}
+
+		// 여기에 resultSheet와 outSheet를 사용한 작업 수행
+		if (num==0) {
+			resultSheet->writeStr(0, 0, _T("순번"));
+			resultSheet->writeStr(0, 1, _T("개월"));
+			resultSheet->writeStr(0, 2, _T("S금액"));
+			resultSheet->writeStr(0, 3, _T("E금액"));
+			resultSheet->writeStr(0, 4, _T("차액"));
+			resultSheet->writeStr(0, 5, _T("S인원"));
+			resultSheet->writeStr(0, 6, _T("E인원"));
+			resultSheet->writeStr(0, 7, _T("증감"));
+			resultSheet->writeStr(0, 8, m_strComment);
+		}
+
+		resultSheet->writeNum(num + 1, 0, num);
+
+		int lastWeek = outSheet->readNum(0, 1);//종료일
+		resultSheet->writeNum(num + 1, 1, lastWeek);
+
+		if (155 <= lastWeek)
+		{
+			lastWeek = 155;
+		}
+		
+		int SMoney = outSheet->readNum(32, 1);// S금액
+		int EMoney = outSheet->readNum(34, lastWeek);// E금액
+		int Profit = EMoney - SMoney;
+
+		int SHR = outSheet->readNum(16, 1);// S인원
+		SHR += outSheet->readNum(17, 1);// S인원
+		SHR += outSheet->readNum(18, 1);// S인원
+
+		int EHR = outSheet->readNum(16, lastWeek);// E인원
+		EHR += outSheet->readNum(17, lastWeek);// E인원
+		EHR += outSheet->readNum(18, lastWeek);// E인원
+
+		int TotaHR = EHR - SHR;// 최종 인원, 인원 증감
+
+
+		resultSheet->writeNum(num + 1, 2, SMoney);
+		resultSheet->writeNum(num + 1, 3, EMoney);
+		resultSheet->writeNum(num + 1, 4, Profit);
+
+		resultSheet->writeNum(num + 1, 5, SHR);
+		resultSheet->writeNum(num + 1, 6, EHR);
+		resultSheet->writeNum(num + 1, 7, TotaHR);
+		
+		// 변경사항 저장
+		if (!book->save((LPCWSTR)strFileName)) {
+			AfxMessageBox(_T("Failed to save the file."));
+		}
+	}
+	else {
+		// 파일이 존재하지 않거나 로드 실패
+		AfxMessageBox(_T("Failed to load the file."));
+		return;
+	}
+
+	book->release();
+}
+
 
 void CSimulatorDlg::OnBnClickedSimulation()
 {
 	// TODO: 여기에 컨트롤 알림 처리기 코드를 추가합니다.
 
-	ALL_ACT_TYPE* actTemp = new ALL_ACT_TYPE;
-	ALL_ACTIVITY_PATTERN* patternTemp = new ALL_ACTIVITY_PATTERN;
-	DefaultParameters(actTemp, patternTemp);
+	MakePath();
 
-#define _PRINT_WIDTH	13
-#define _PRINT_CNT	1
+	Book* book = xlCreateXMLBook();  // Use xlCreateBook() for xls format	
 
-	int iLoop = _PRINT_CNT;
+	// 정품 키 값이 들어 있다. 공개하는 프로젝트에는 포함되어 있지 않다. 
+	// 정품 키가 없으면 읽기가 300 컬럼으로 제한된다.
+#ifdef INCLUDE_LIBXL_KET	
+	book->setKey(_LIBXL_NAME, _LIBXL_KEY);
+#endif	
 
-	int* lastResult = NULL;
+	//CString strFileName = _T("d:/test/111.xlsx");
+	Sheet* resultSheet = nullptr;
 
-	lastResult = new int[iLoop * _PRINT_WIDTH];
-
-	for (int loop = 0; loop < iLoop; loop++)
-	{
-		CCreator Creator;
-		Creator.Init(m_pGlobalEnv, actTemp, patternTemp);
-
-		CString prarmFile;
-		prarmFile =_T("d:\\test\\newresualt.ahn");
-
-		Creator.Save(prarmFile);
-
-		CCompany* company = new CCompany;
-		company->Init(prarmFile);
-		//company->TableInit();
-
-		int k = 0;
-		while (k < m_pGlobalEnv->SimulationWeeks)
-		{
-			if (FALSE == company->Decision(k))  // j번째 기간에 결정해야 할 일들		
-				k = 9999; //m_pGlobalEnv->SimulationWeeks + 1;
-
-			k++;
-		}
-		company->PrintCompanyResualt();
+	if (book->load((LPCWSTR)m_strFileName)) {
+		resultSheet = book->getSheet(0);			
+		clearSheet(resultSheet);  // Assuming you have a clearSheet function defined		
+	}
+	else {
+		// File does not exist, create new file with sheets
+		resultSheet = book->addSheet(_T("box"));
 	}
 
-	delete actTemp;
-	delete patternTemp;
-	delete lastResult;
+	draw_outer_border(book, resultSheet, 1, 1, 10, 20, BORDERSTYLE_THIN, COLOR_BLACK);
+	
+	// Save and release
+	book->save((LPCWSTR)m_strFileName);
+	book->release();
+
 }
+
+
+void CSimulatorDlg::OnBnClickedClearXl()
+{
+	// TODO: 여기에 컨트롤 알림 처리기 코드를 추가합니다.	
+	MakePath();
+
+	//CString strFileName = _T("d:/test/imsi000.xlsm");
+	CString strOutSheetName;
+
+	Book* book = xlCreateXMLBook();  // Use xlCreateBook() for xls format	
+#ifdef INCLUDE_LIBXL_KET	
+	book->setKey(_LIBXL_NAME, _LIBXL_KEY);
+#endif	
+	if (book->load((LPCWSTR)m_strFileName))
+	{
+		for (int i = 0; i < 100; i++)
+		{
+			strOutSheetName.Format(_T("Out%03d"), i);
+			// 시트 이름과 일치하는 모든 시트 찾아 삭제
+			int sheetCount = book->sheetCount();
+			for (int j = sheetCount - 1; j >= 0; j--)  // 역순으로 순회
+			{
+				Sheet* sheet = book->getSheet(j);
+				if (sheet && wcscmp(sheet->name(), (LPCWSTR)strOutSheetName) == 0)
+				{
+					book->delSheet(j);
+				}
+			}
+		}
+		// 변경사항 저장
+		if (!book->save((LPCWSTR)m_strFileName))
+		{
+			AfxMessageBox(_T("Failed to save the file."));
+		}
+	}
+	else
+	{
+		AfxMessageBox(_T("Failed to load the file."));
+	}
+
+	// 리소스 해제
+	book->release();
+}
+
+
+void CSimulatorDlg::OnBnClickedOnlyRun()
+{
+	// TODO: 여기에 컨트롤 알림 처리기 코드를 추가합니다.
+
+	MakePath();
+
+	CString strInSheetName;
+	CString strOutSheetName;
+	CString strResultSheetName = _T("result");;
+
+	for (int i = 0; i < m_ProblemCnt; i++)
+	{
+		strInSheetName.Format(_T("In%03d"), i);
+		strOutSheetName.Format(_T("Out%03d"), i);
+
+		OnlyRun(m_strFileName, strInSheetName, strOutSheetName);
+		MakeResult(m_strFileName, strResultSheetName, strOutSheetName, i);
+	}
+}
+
+
+
+void CSimulatorDlg::OnBnClickedChangeFolder()
+{
+	// TODO: 여기에 컨트롤 알림 처리기 코드를 추가합니다.
+	BROWSEINFO BrInfo;
+	TCHAR szBuffer[512];                                      // 경로저장 버퍼 
+
+	::ZeroMemory(&BrInfo, sizeof(BROWSEINFO));
+	::ZeroMemory(szBuffer, 512);
+
+	BrInfo.hwndOwner = GetSafeHwnd();
+	BrInfo.lpszTitle = _T("파일이 저장될 폴더를 선택하세요");
+	BrInfo.ulFlags = BIF_NEWDIALOGSTYLE | BIF_EDITBOX | BIF_RETURNONLYFSDIRS;
+	LPITEMIDLIST pItemIdList = ::SHBrowseForFolder(&BrInfo);
+
+	if (pItemIdList != NULL)
+	{
+		// 폴더가 선택되었을 때
+		if (::SHGetPathFromIDList(pItemIdList, szBuffer))
+		{
+			CString str(szBuffer); 
+			// 백슬래시를 슬래시로 변경
+			str.Replace(_T("\\"), _T("/"));
+			str.Append(_T("/"));
+			SetDlgItemText(IDC_SAVE_PATH, str);
+		}
+
+		// ITEMIDLIST 메모리 해제
+		CoTaskMemFree(pItemIdList);
+	}	
+}
+
+
+void CSimulatorDlg::MakePath()
+{
+	CString strTemp;
+	GetDlgItemText(IDC_SAVE_FILE, strTemp);
+
+	GetDlgItemText(IDC_SAVE_PATH, m_strFileName);
+	
+	CString strPath = m_strFileName;
+	strPath = m_strFileName;
+	strPath.Replace(_T("/") , _T("\\"));
+	CreateDirectoryRecursively(strPath);
+
+	m_strFileName.Append(strTemp);
+	
+	m_ProblemCnt = GetDlgItemInt(IDC_PROBLEM_CNT);
+}
+
+BOOL CSimulatorDlg::CreateDirectoryRecursively(const CString& strPath)
+{
+	CString strTemp = strPath;
+
+	// 경로의 끝에 있는 '/' 또는 '\' 제거
+	strTemp.TrimRight(_T("\\/"));
+
+	// 경로가 이미 존재하는지 확인
+	if (GetFileAttributes(strTemp) != INVALID_FILE_ATTRIBUTES)
+	{
+		return TRUE; // 이미 존재하면 성공으로 간주
+	}
+
+	// 상위 디렉토리 생성 (재귀적으로)
+	int nFound = strTemp.ReverseFind(_T('\\'));
+	if (nFound != -1)
+	{
+		if (!CreateDirectoryRecursively(strTemp.Left(nFound)))
+		{
+			return FALSE; // 상위 디렉토리 생성 실패
+		}
+	}
+
+	// 현재 디렉토리 생성
+	if (!CreateDirectory(strTemp, NULL))
+	{
+		DWORD dwError = GetLastError();
+		if (dwError != ERROR_ALREADY_EXISTS)
+		{
+			// 이미 존재하는 경우가 아닌 다른 오류라면 실패
+			return FALSE;
+		}
+	}
+
+	return TRUE;
+}
+

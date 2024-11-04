@@ -10,21 +10,20 @@ class CCompany
 {
 public:
 	CCompany();
-	~CCompany();
-	BOOL Init(CString fileName);
+	~CCompany();	
+	BOOL Init(CString fileName, CString strInSheet);
 	void TableInit();
 	void ClearMemory();
 		
 	BOOL Decision(int thisWeek);
 	int CalculateFinalResult();
-	int CalculateTotalInCome();	
-	void PrintCompanyResualt();	
+	int CalculateTotalInCome();		
+	void PrintCompanyResualt(CString strFileName, CString strOutSheetName);
 	void write_CompanyInfo(Book* book, Sheet* sheet);
 		
 	GLOBAL_ENV m_GlobalEnv;
 	int m_lastDecisionWeek;
-	CString m_XlFileName;
-	
+		
 	Dynamic2DArray m_totalHR;
 	int recruitTerm; // 인원 충감을 계산하는 기간 비율 (100/기간(week) 로 계산)	
 	

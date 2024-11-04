@@ -357,8 +357,8 @@ double CCreator::CalculateLaborCost(const std::string& grade) {
 	}
 
 	// 간접 : 직접 : 기술 = 6:2:2 = 10 ==> 소숫점이 나오지 않게 10배 키워서 계산한다.
-	overheadCost = directLaborCost * 0.6; // 간접 비용 계산
-	technicalFee = (directLaborCost + overheadCost) * 0.2; // 기술 비용 계산
+	overheadCost = directLaborCost * 1.4;// 0.6; // 간접 비용 계산
+	technicalFee = (directLaborCost + overheadCost) * 0.4;// 0.2; // 기술 비용 계산
 	totalLaborCost = directLaborCost + overheadCost + technicalFee; // 총 인건비 계산
 
 	return totalLaborCost;
@@ -472,7 +472,7 @@ void CCreator::CalculatePaymentSchedule(PROJECT* pProject) {
 	pProject->nCashFlows = totalPayments;
 }
 
-void CCreator::Save(CString filename)
+void CCreator::Save(CString filename,CString strInSheetName)
 {
 	Book* book = xlCreateXMLBook();  // Use xlCreateBook() for xls format	
 
@@ -490,28 +490,28 @@ void CCreator::Save(CString filename)
 
 		for (int i = 0; i < book->sheetCount(); ++i) {
 			Sheet* sheet = book->getSheet(i);
-			if (std::wcscmp(sheet->name(), L"project") == 0) {
+			if (std::wcscmp(sheet->name(), strInSheetName) == 0) {
 				projectSheet = sheet;
 				clearSheet(projectSheet);  // Assuming you have a clearSheet function defined
 			}
-			if (std::wcscmp(sheet->name(), L"dashboard") == 0) {
-				dashboardSheet = sheet;
-				clearSheet(dashboardSheet);  // Assuming you have a clearSheet function defined
-			}
+			//if (std::wcscmp(sheet->name(), L"dashboard") == 0) {
+			//	dashboardSheet = sheet;
+			//	clearSheet(dashboardSheet);  // Assuming you have a clearSheet function defined
+			//}
 		}
 
 		if (!projectSheet) {
-			projectSheet = book->addSheet(L"project");
+			projectSheet = book->addSheet(strInSheetName);
 		}
 
-		if (!dashboardSheet) {
+		/*if (!dashboardSheet) {
 			dashboardSheet = book->addSheet(L"dashboard");
-		}
+		}*/
 	}
 	else {
 		// File does not exist, create new file with sheets
-		projectSheet = book->addSheet(L"project");  // Add and assign the 'project' sheet
-		dashboardSheet = book->addSheet(L"dashboard");  // Add and assign the 'dashboard' sheet
+		projectSheet = book->addSheet(strInSheetName);  // Add and assign the 'project' sheet
+		//dashboardSheet = book->addSheet(L"dashboard");  // Add and assign the 'dashboard' sheet
 	}
 
 	write_global_env(book, projectSheet,&m_GlobalEnv);
@@ -521,7 +521,7 @@ void CCreator::Save(CString filename)
 		write_project_body(book, projectSheet, &(m_pProjects[0][i]));  // Assuming write_project_body is defined
 	}
 
-	projectSheet->writeStr(1, 2, L"TatalPrjNum");
+	projectSheet->writeStr(1, 2, L"TotalPrjNum");
 	projectSheet->writeNum(1, 3, m_totalProjectNum);
 
 	// Save and release

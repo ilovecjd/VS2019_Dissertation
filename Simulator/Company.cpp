@@ -21,7 +21,7 @@ void CCompany::ClearMemory()
 
 }
 
-BOOL CCompany::Init(CString fileName)
+BOOL CCompany::Init(CString fileName,CString strInSheet)
 {
     Book* book = xlCreateXMLBook();  // Use xlCreateBook() for xls format	
 
@@ -37,7 +37,7 @@ BOOL CCompany::Init(CString fileName)
         // File exists, check for specific sheets
         for (int i = 0; i < book->sheetCount(); ++i) {
             Sheet* sheet = book->getSheet(i);
-            if (std::wcscmp(sheet->name(), L"project") == 0) {
+            if (std::wcscmp(sheet->name(), strInSheet) == 0) {
                 projectSheet = sheet;
             }
         }
@@ -607,8 +607,12 @@ void CCompany::SelectNewProject(int thisWeek)
 		if(project->category == 0){// 외부 프로젝트
 			valueArray[j] = project->profit;
 		}
-		else {  //내부 프로젝트는 금액은 0으로. 내부 외부 경쟁만 가져가자.
-			valueArray[j] = 0;// project->profit * 4 * 12 * 3;
+		else {  //
+			int Order = m_GlobalEnv.selectOrder;
+			if((1 == Order)||((4 == Order)))// 
+				valueArray[j] = 0;// project->profit * 4 * 12 * 3;
+			else
+				valueArray[j] = 99999;// project->profit * 4 * 12 * 3;
 		}
 		j ++;
 	}
@@ -616,14 +620,22 @@ void CCompany::SelectNewProject(int thisWeek)
 	// 설정된 우선순위대로 프로젝트를 재 배치 한다.
 	switch (m_GlobalEnv.selectOrder)
 	{
-	case 1: // 발생 순서대로
+	case 0: // 발생 순서대로
 		break;
-	case 2:
-		sortArrayAscending(m_candidateTable, valueArray, j);	// 금액 내림차순 정렬	
+	case 1: // 내부를 먼저 외부는 작은것 위주 0
+		sortArrayAscending(m_candidateTable, valueArray, j);	// 금액 오름차순 정렬	
 		break;
-	case 3:
-		sortArrayDescending(m_candidateTable, valueArray, j); // 금액 오름차순 정렬	
+	case 2: // 내부를 마지막에 외부는 작은것 위주 99999
+		sortArrayAscending(m_candidateTable, valueArray, j);	// 금액 오름차순 정렬	
 		break;
+
+	case 3: // 내부를 먼저 외부는 큰것 위주 99999		
+		sortArrayDescending(m_candidateTable, valueArray, j); // 금액 내림차순 정렬	
+		break;
+	case 4: // 내부를 마지막에 외부는 큰것 위주 0
+		sortArrayDescending(m_candidateTable, valueArray, j); // 금액 내림차순 정렬	
+		break;
+
 	default : 
 		break;
 	} 
@@ -898,11 +910,8 @@ int CCompany::CalculateTotalInCome()
 	return result;
 }
 
-void CCompany::PrintCompanyResualt()
+void CCompany::PrintCompanyResualt(CString strFileName, CString strOutSheetName)
 {
-	m_XlFileName = _T("d:/test/newresualt.xlsx");
-	CString strSheetName = _T("result");
-
 	Book* book = xlCreateXMLBook();  // Use xlCreateBook() for xls format	
 
 	// 정품 키 값이 들어 있다. 공개하는 프로젝트에는 포함되어 있지 않다. 
@@ -913,29 +922,29 @@ void CCompany::PrintCompanyResualt()
 	
 	Sheet* resultSheet = nullptr;
 
-	if (book->load((LPCWSTR)m_XlFileName)) {
+	if (book->load((LPCWSTR)strFileName)) {
 
 		for (int i = 0; i < book->sheetCount(); ++i) {
 			Sheet* sheet = book->getSheet(i);
-			if (std::wcscmp(sheet->name(), strSheetName) == 0) {
+			if (std::wcscmp(sheet->name(), strOutSheetName) == 0) {
 				resultSheet = sheet;
 				clearSheet(resultSheet);  // Assuming you have a clearSheet function defined
 			}
 		}
 
 		if (!resultSheet) {
-			resultSheet = book->addSheet(strSheetName);
+			resultSheet = book->addSheet(strOutSheetName);
 		}
 	}
 	else {
 		// File does not exist, create new file with sheets
-		resultSheet = book->addSheet(strSheetName);
+		resultSheet = book->addSheet(strOutSheetName);
 	}
 
 	write_CompanyInfo(book, resultSheet);
 
 	// Save and release
-	book->save((LPCWSTR)m_XlFileName);
+	book->save((LPCWSTR)strFileName);
 	book->release();
 }
 

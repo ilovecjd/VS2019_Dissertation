@@ -20,9 +20,8 @@ public :
 	Dynamic2DArray m_orderTable;
 	
 	BOOL Init(GLOBAL_ENV* pGlobalEnv, ALL_ACT_TYPE* pActType, ALL_ACTIVITY_PATTERN* pActPattern);	
-	void Save(CString filename);
-	void Load(CString filename);
-	
+	void Save(CString filename, CString strInSheetName);
+		
 private:	
 	GLOBAL_ENV m_GlobalEnv;
 	ALL_ACT_TYPE m_ActType;
