@@ -56,6 +56,7 @@ public:
 	void MakeResult(CString strFileName, CString  strResultSheetName, CString  strOutSheetName, int num);
 	GLOBAL_ENV* m_pGlobalEnv;
 	afx_msg void OnBnClickedSimulation();
+	CProgressCtrl* m_Progress;
 
 
 

@@ -173,8 +173,8 @@ BOOL CSimulatorDlg::OnInitDialog()
 	m_pGlobalEnv->ExpenseRate = 1.2;
 	SetDlgItemText(IDC_EXP_RATE, _T("1.2"));
 
-
-
+	m_pGlobalEnv->recruitTerm = 12;
+	SetDlgItemInt(IDC_RECUIT_TERM, m_pGlobalEnv->recruitTerm);
 
 	srand(static_cast<unsigned int>(time(nullptr)));
 	CString m_strFolderPath = _T("c:/ahnLab/");
@@ -193,6 +193,9 @@ BOOL CSimulatorDlg::OnInitDialog()
 
 	SetDlgItemInt(IDC_PROBLEM_CNT,100);
 	
+
+	m_Progress = (CProgressCtrl*)GetDlgItem(IDC_PROGRESS);
+
 	return TRUE;  // 포커스를 컨트롤에 설정하지 않으면 TRUE를 반환합니다.
 }
 
@@ -326,6 +329,7 @@ void CSimulatorDlg::GetMainParameters(ALL_ACT_TYPE* act, ALL_ACTIVITY_PATTERN* p
 
 	m_pGlobalEnv->recruit = GetDlgItemInt(IDC_RECRUIT);
 	m_pGlobalEnv->layoff = GetDlgItemInt(IDC_LAY_OFF);
+	m_pGlobalEnv->recruitTerm = GetDlgItemInt(IDC_RECUIT_TERM);
 
 	GetDlgItemText(IDC_EXP_RATE, strTemp);
 	m_pGlobalEnv->ExpenseRate = _wtof(strTemp.GetString());
@@ -400,16 +404,30 @@ void CSimulatorDlg::OnBnClickedCreateProject()
 	MakePath();
 	CString strInSheetName;
 	CString strOutSheetName;
-	CString strResultSheetName = _T("result");;
+	CString strResultSheetName = _T("result");
+
+	
+
+	m_Progress->SetRange(0, m_ProblemCnt*2);
+	m_Progress->SetPos(0);
+	m_Progress->SetStep(1);	
 
 	for (int i  = 0; i < m_ProblemCnt; i++)
 	{		
 		strInSheetName.Format(_T("In%03d"),i);
 		strOutSheetName.Format(_T("Out%03d"), i);
 
+		m_Progress->SetDlgItemTextW(IDC_PROGRESS, L"Make and run");
 		MakeProjectAndRun(m_strFileName, strInSheetName, strOutSheetName);
+		m_Progress->StepIt();
+		m_Progress->Invalidate();
+		
+		m_Progress->SetDlgItemTextW(IDC_PROGRESS, L"Make Result");
 		MakeResult(m_strFileName, strResultSheetName, strOutSheetName, i);
+		m_Progress->StepIt();
+		m_Progress->Invalidate();
 	}	
+	m_Progress->SetPos(0);
 }
 void CSimulatorDlg::MakeResult(CString strFileName, CString  strResultSheetName, CString  strOutSheetName, int num)
 {

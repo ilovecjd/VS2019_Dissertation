@@ -25,7 +25,7 @@ public:
 	int m_lastDecisionWeek;
 		
 	Dynamic2DArray m_totalHR;
-	int recruitTerm; // 인원 충감을 계산하는 기간 비율 (100/기간(week) 로 계산)	
+	//int m_recruitTerm; // 인원 충감을 계산하는 기간, 몇주마다 충원감원을 검사할지.
 	
 private:
 	// 초기화 필요한 변수들

@@ -26,7 +26,10 @@
 #define IDC_HR_L                        1016
 #define IDC_LEAD_TIME                   1017
 #define IDC_CASH                        1018
+#define IDC_PROGRESS                    1019
 #define IDC_ORDER                       1020
+#define IDC_REC_TERM                    1021
+#define IDC_RECUIT_TERM                 1021
 #define IDC_RECRUIT                     1022
 #define IDC_LAY_OFF                     1023
 #define IDC_EXP_RATE                    1024
@@ -37,7 +40,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        131
 #define _APS_NEXT_COMMAND_VALUE         32771
-#define _APS_NEXT_CONTROL_VALUE         1012
+#define _APS_NEXT_CONTROL_VALUE         1020
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

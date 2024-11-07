@@ -452,6 +452,8 @@ void write_global_env(Book* book, Sheet* sheet, GLOBAL_ENV* pGlobalEnv) {
 	sheet->writeNum(posY, posX++, pGlobalEnv->recruit);
 	sheet->writeStr(posY, posX++, L"layoff");
 	sheet->writeNum(posY, posX++, pGlobalEnv->layoff);
+	sheet->writeStr(posY, posX++, L"recruitTerm");
+	sheet->writeNum(posY, posX++, pGlobalEnv->recruitTerm);
 
 	// Define and apply styles
 	Format* format = book->addFormat();
@@ -484,6 +486,7 @@ void read_global_env(Book* book, Sheet* sheet, GLOBAL_ENV* pGlobalEnv) {
 	pGlobalEnv->selectOrder		= sheet->readNum(posY, posX += 2);
 	pGlobalEnv->recruit			= sheet->readNum(posY, posX += 2);
 	pGlobalEnv->layoff			= sheet->readNum(posY, posX += 2);
+	pGlobalEnv->recruitTerm		= sheet->readNum(posY, posX += 2);	
 }
 
 //void write_project_body(xlnt::worksheet& ws, PROJECT* pProject)

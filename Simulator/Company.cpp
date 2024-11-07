@@ -4,8 +4,7 @@
 #include "Creator.h"
 
 CCompany::CCompany()
-{
-	recruitTerm = 8; // (분기 마다 인원 증감 결정 ==> 1000/12주)
+{	
 }
 
 CCompany::~CCompany()
@@ -199,12 +198,12 @@ BOOL CCompany::CheckLastWeek(int thisWeek)
 		PROJECT* project = m_AllProjects + prjId;
 		project->runningWeeks += 1; // 지금까지 진행된 기간을 runningWeeks 에 한주 증가시켜서 표시함.
 
-		if (project->category == 0 ) {// 외부프로젝트면
+		if (project->category == 0) {// 외부프로젝트면
 			// 1. payment 를 계산한다. 선금은 시작시 받기로 한다. 조건완료후 1주 후 수금			
 			// 2. 지출을 계산한다.
 			// 3. 진행중인 프로젝트를 이관해서 기록한다.
 			int sum = m_doingTable[ORDER_SUM][thisWeek];
-			if (thisWeek <= project->endDate ) // ' 아직 안끝났으면
+			if (thisWeek <= project->endDate) // ' 아직 안끝났으면
 			{
 				m_doingTable[sum + 1][thisWeek] = project->ID;// 테이블 크기는 자동으로 변경된다.
 				m_doingTable[ORDER_SUM][thisWeek] = sum + 1;
@@ -213,14 +212,14 @@ BOOL CCompany::CheckLastWeek(int thisWeek)
 		else // 내부프로젝트
 		{
 			// 1. 지난주에 종료되었으면 앞으로 받을 금액표 업데이트
-			if (project->duration == project->runningWeeks){
+			if (project->duration == project->runningWeeks) {
 				int win = ZeroOrOneByProb(project->winProb); // 성공 확율에 따라서 금액을 결정한다.
 				if (win) {
-					for (int future = thisWeek; future < m_GlobalEnv.maxWeek ; future++) {
-						if ((future-thisWeek) < (52 * 3)) {// 신제품은 3년만 유효
+					for (int future = thisWeek; future < m_GlobalEnv.maxWeek; future++) {
+						if ((future - thisWeek) < (52 * 3)) {// 신제품은 3년만 유효
 							int tempIncome = project->profit / project->duration;
 							m_incomeTable[0][future] += tempIncome;
-						}						
+						}
 					}
 				}
 			}
@@ -251,45 +250,48 @@ BOOL CCompany::CheckLastWeek(int thisWeek)
 	}
 
 
-	/// 인원 충원을 결정하자.
-	
-	// 지금부터 채용한계선까지의 수지 차이
-	// 이렇게 하면 너무 채용이 많아짐. 
-	int temp = m_GlobalEnv.Cash_Init; // 기간까지 필요한 현금 = 필요지출 - 예상수입
-	for (int i = 0; i < m_GlobalEnv.recruit; i++)
+	int term = 0;
+	term = thisWeek % m_GlobalEnv.recruitTerm;
+	if (term == 0)/// 인원 충원을 결정하자.
 	{
-		temp += m_expensesTable[0][i + thisWeek] - (m_incomeTable[0][i + thisWeek]) ;
-	}
-
-	// 보유 현금으로 인원 충원 한계선 이상 유지가 가능하면 충원		
-	if (temp < Cash)
-	{
-		//분기에 한번 꼴로 충원하자.
-		if (0 < recruitTerm){ //0 이면 인원 증감 없음
-			int win = ZeroOrOneByProb(recruitTerm); // 분기에 한번 충원
-			if (win) {
-				int i = rand() % 3; /// 고급,중급,초급중 아무나
-				AddHR(i, thisWeek + m_GlobalEnv.Hr_LeadTime);// 인원 충원 리드 타임
-			}
-		}		
-	}
-
-	else 
-	{
-		temp = 0;// m_GlobalEnv.Cash_Init;
-		for (int i = 0; i < m_GlobalEnv.layoff; i++)
+		// 지금부터 채용한계선까지의 수지 차이
+		// 이렇게 하면 너무 채용이 많아짐. 
+		int temp = m_GlobalEnv.Cash_Init; // 기간까지 필요한 현금 = 필요지출 - 예상수입
+		for (int i = 0; i < m_GlobalEnv.recruit; i++)
 		{
-			temp += (m_expensesTable[0][i + thisWeek] - m_incomeTable[0][i + thisWeek] );
+			temp += m_expensesTable[0][i + thisWeek] - (m_incomeTable[0][i + thisWeek]);
 		}
 
-		if (temp > Cash)
+		// 보유 현금으로 인원 충원 한계선 이상 유지가 가능하면 충원		
+		if (temp < Cash)
 		{
-			if (0 < recruitTerm) { //0 이면 인원 증감 없음
-				int win = ZeroOrOneByProb(recruitTerm); // 분기에 한번 감원
-				if (win) {
-					int i = rand() % 3;  //song 인원 감원은 프로젝트 할당 상황을 보고 결정하게 수정해야함.
-					RemoveHR(i, thisWeek + m_GlobalEnv.Hr_LeadTime);// 인원 감원 리드 타임
-				}
+			//분기에 한번 꼴로 충원하자.
+			//if (0 < recruitTerm) { //0 이면 인원 증감 없음
+				//int win = ZeroOrOneByProb(recruitTerm); // 분기에 한번 충원
+				//if (win) {
+					int i = rand() % 3; /// 고급,중급,초급중 아무나
+					AddHR(i, thisWeek + m_GlobalEnv.Hr_LeadTime);// 인원 충원 리드 타임
+				//}
+			//}
+		}
+
+		else
+		{
+			temp = 0;// m_GlobalEnv.Cash_Init;
+			for (int i = 0; i < m_GlobalEnv.layoff; i++)
+			{
+				temp += (m_expensesTable[0][i + thisWeek] - m_incomeTable[0][i + thisWeek]);
+			}
+
+			if (temp > Cash)
+			{
+				//if (0 < recruitTerm) { //0 이면 인원 증감 없음
+					//int win = ZeroOrOneByProb(recruitTerm); // 분기에 한번 감원
+					//if (win) {
+						int i = rand() % 3;  //song 인원 감원은 프로젝트 할당 상황을 보고 결정하게 수정해야함.
+						RemoveHR(i, thisWeek + m_GlobalEnv.Hr_LeadTime);// 인원 감원 리드 타임
+					//}
+				//}
 			}
 		}
 	}
