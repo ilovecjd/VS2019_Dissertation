@@ -155,7 +155,7 @@ BOOL CSimulatorDlg::OnInitDialog()
 	m_pGlobalEnv->Hr_LeadTime = 4;
 	SetDlgItemInt(IDC_LEAD_TIME, m_pGlobalEnv->Hr_LeadTime);
 
-	m_pGlobalEnv->Cash_Init = (HI_HR_COST * hr_h + MI_HR_COST * hr_m + LO_HR_COST * hr_l) * 4 * 12 * 1.2; //인원수 대비 12개월;
+	m_pGlobalEnv->Cash_Init = (HI_HR_COST * hr_h + MI_HR_COST * hr_m + LO_HR_COST * hr_l) * 52 * 1.2; //인원수 대비 12개월;
 	SetDlgItemInt(IDC_CASH, m_pGlobalEnv->Cash_Init);
 
 	m_pGlobalEnv->ProblemCnt = 100;
@@ -414,8 +414,8 @@ void CSimulatorDlg::OnBnClickedCreateProject()
 
 	for (int i  = 0; i < m_ProblemCnt; i++)
 	{		
-		strInSheetName.Format(_T("In%03d"),i);
-		strOutSheetName.Format(_T("Out%03d"), i);
+		strInSheetName.Format(_T("In%04d"),i);
+		strOutSheetName.Format(_T("Out%04d"), i);
 
 		m_Progress->SetDlgItemTextW(IDC_PROGRESS, L"Make and run");
 		MakeProjectAndRun(m_strFileName, strInSheetName, strOutSheetName);
@@ -527,11 +527,13 @@ void CSimulatorDlg::MakeResult(CString strFileName, CString  strResultSheetName,
 		resultSheet->writeNum(num + 1, 6, EHR);
 		resultSheet->writeNum(num + 1, 7, TotaHR);
 		
-		// 사용이 끝난 시트는 지운다. 
-		if (isDelete = TRUE) {
-			book->delSheet(iOutNum);
-			book->delSheet(iInNum);
-		}
+		// 사용이 끝난 시트는 처음것은 남겨 놓고 지운다. 
+		if (num != 0) {
+			if (isDelete = TRUE) {
+				book->delSheet(iOutNum);
+				book->delSheet(iInNum);
+			}
+		}		
 
 		// 변경사항 저장
 		if (!book->save((LPCWSTR)strFileName)) {
