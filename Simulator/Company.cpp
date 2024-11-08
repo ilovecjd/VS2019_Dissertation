@@ -113,7 +113,7 @@ void CCompany::TableInit()
 
 	// 소요 비용 계산. 수정시 다음도 수정 필요 CProject::CalculateLaborCost(const std::string& grade)
 	double rate = m_GlobalEnv.ExpenseRate;
-	int expenses = (m_GlobalEnv.Hr_Init_H * 50 * rate) + (m_GlobalEnv.Hr_Init_M * 39 * rate) + (m_GlobalEnv.Hr_Init_L * 25 * rate);
+	int expenses = (m_GlobalEnv.Hr_Init_H * HI_HR_COST * rate) + (m_GlobalEnv.Hr_Init_M * MI_HR_COST * rate) + (m_GlobalEnv.Hr_Init_L * LO_HR_COST * rate);
 
 	m_incomeTable[0][0] = m_GlobalEnv.Cash_Init;
 	for (int i = 0; i < m_GlobalEnv.maxWeek; i++)
@@ -231,12 +231,10 @@ BOOL CCompany::CheckLastWeek(int thisWeek)
 			}
 		}
 	}
-
-	// 자금 현황을 체크하자.
-	// 나중에 후회 해도 일단은 편하게 코딩.	
-
+	
+	// 자금 현황을 체크하자. 전체 재계산이 불편해 보여도 그대로 두자.
 	// 현재 보유중인 현금
-	int Cash = 0;// m_incomeTable의 첫 갑을 m_GlobalEnv.Cash_Init; 로 초기화함.
+	int Cash = 0;// m_incomeTable의 첫 값을 m_GlobalEnv.Cash_Init; 로 초기화함.
 	for (int i = 0; i < thisWeek; i++)
 	{
 		Cash += (m_incomeTable[0][i] - m_expensesTable[0][i]);
@@ -249,49 +247,38 @@ BOOL CCompany::CheckLastWeek(int thisWeek)
 		return FALSE;
 	}
 
-
 	int term = 0;
 	term = thisWeek % m_GlobalEnv.recruitTerm;
 	if (term == 0)/// 인원 충원을 결정하자.
-	{
-		// 지금부터 채용한계선까지의 수지 차이
-		// 이렇게 하면 너무 채용이 많아짐. 
-		int temp = m_GlobalEnv.Cash_Init; // 기간까지 필요한 현금 = 필요지출 - 예상수입
-		for (int i = 0; i < m_GlobalEnv.recruit; i++)
-		{
-			temp += m_expensesTable[0][i + thisWeek] - (m_incomeTable[0][i + thisWeek]);
-		}
+	{		
+		// 현재 필요한 주당 유지 비용		
+		double rate = m_GlobalEnv.ExpenseRate;
+		int expenses = (m_totalHR[0][thisWeek] * HI_HR_COST * rate) + (m_totalHR[1][thisWeek] * MI_HR_COST * rate) + (m_totalHR[2][thisWeek] * LO_HR_COST * rate);
 
-		// 보유 현금으로 인원 충원 한계선 이상 유지가 가능하면 충원		
-		if (temp < Cash)
+		// 이익 잉여금 (현재 보유금 - 초기자금)				
+		int earnings = Cash - m_GlobalEnv.Cash_Init;
+		
+		if ( 0 < earnings) // 이익 상태이면 
 		{
-			//분기에 한번 꼴로 충원하자.
-			//if (0 < recruitTerm) { //0 이면 인원 증감 없음
-				//int win = ZeroOrOneByProb(recruitTerm); // 분기에 한번 충원
-				//if (win) {
-					int i = rand() % 3; /// 고급,중급,초급중 아무나
-					AddHR(i, thisWeek + m_GlobalEnv.Hr_LeadTime);// 인원 충원 리드 타임
-				//}
-			//}
-		}
-
-		else
-		{
-			temp = 0;// m_GlobalEnv.Cash_Init;
-			for (int i = 0; i < m_GlobalEnv.layoff; i++)
-			{
-				temp += (m_expensesTable[0][i + thisWeek] - m_incomeTable[0][i + thisWeek]);
+			// 이익 잉여금으로 recruit 이상 유지 가능하면 충원
+			int temp = expenses * m_GlobalEnv.recruit;
+			if (earnings > temp) {
+				int i = rand() % 3; /// 고급,중급,초급중 아무나
+				AddHR(i, thisWeek + m_GlobalEnv.Hr_LeadTime);// 인원 충원 리드 타임
 			}
-
-			if (temp > Cash)
-			{
-				//if (0 < recruitTerm) { //0 이면 인원 증감 없음
-					//int win = ZeroOrOneByProb(recruitTerm); // 분기에 한번 감원
-					//if (win) {
-						int i = rand() % 3;  //song 인원 감원은 프로젝트 할당 상황을 보고 결정하게 수정해야함.
-						RemoveHR(i, thisWeek + m_GlobalEnv.Hr_LeadTime);// 인원 감원 리드 타임
-					//}
-				//}
+		}
+		
+		else // 이익 잉여금이 손실이고   layoff 이상 이면 감원
+		{			
+			if (thisWeek > 24) { // 6개월간은 감원 없음.
+				//손실이   layoff 이상 이면 감원 
+				earnings = earnings * -1; //부호 바꾸고 비교하자
+				int temp = expenses * m_GlobalEnv.layoff; 
+				if (earnings > temp)
+				{			
+					int i = rand() % 3;  //인원 감원은 프로젝트 할당 상황을 보고 결정
+					RemoveHR(i, thisWeek + m_GlobalEnv.Hr_LeadTime);// 인원 감원 리드 타임
+				}
 			}
 		}
 	}
@@ -310,7 +297,7 @@ void CCompany::AddHR(int grade ,int addWeek)
 
 	// 소요 비용 계산. 수정시 다음도 수정 필요 CProject::CalculateLaborCost(const std::string& grade)
 	double rate = m_GlobalEnv.ExpenseRate;
-	int expenses = (m_totalHR[0][addWeek] * 50 * rate) + (m_totalHR[1][addWeek] * 39 * rate) + (m_totalHR[2][addWeek] * 25 * rate);
+	int expenses = (m_totalHR[0][addWeek] * HI_HR_COST * rate) + (m_totalHR[1][addWeek] * MI_HR_COST * rate) + (m_totalHR[2][addWeek] * LO_HR_COST * rate);
 
 	for (int i = addWeek; i < m_GlobalEnv.maxWeek; i++)
 	{
@@ -331,11 +318,17 @@ void CCompany::RemoveHR(int grade, int removeWeek)
 	// 감원 인원 
 	// 나머지 기간 업데이트
 	// 나머지 기간의 비용 업데이트
-	m_totalHR[grade][removeWeek] = m_totalHR[grade][removeWeek] + 1;
+	// removeWeek 부터 grade 에 유휴인력이 있는지 검토
+	for (int i = removeWeek; i < m_GlobalEnv.maxWeek ;  i++) {
+		if (m_freeHR[grade][i] < 1)
+			return;
+	}
+
+	m_totalHR[grade][removeWeek] = m_totalHR[grade][removeWeek] - 1;
 
 	// 소요 비용 계산. 수정시 다음도 수정 필요 CProject::CalculateLaborCost(const std::string& grade)
 	double rate = m_GlobalEnv.ExpenseRate;
-	int expenses = (m_totalHR[0][removeWeek] * 50 * rate) + (m_totalHR[1][removeWeek] * 39 * rate) + (m_totalHR[2][removeWeek] * 25 * rate);
+	int expenses = (m_totalHR[0][removeWeek] * HI_HR_COST * rate) + (m_totalHR[1][removeWeek] * MI_HR_COST * rate) + (m_totalHR[2][removeWeek] * LO_HR_COST * rate);
 
 	for (int i = removeWeek; i < m_GlobalEnv.maxWeek; i++)
 	{

@@ -11,6 +11,10 @@ using namespace libxl;
 #define MAX_CANDIDATES 50
 #define MAX_DOING_TABLE_SIZE 10 //doing, done, deffer table 세로크기
 
+#define HI_HR_COST 50
+#define MI_HR_COST 40
+#define LO_HR_COST 30
+
 // Order Tabe index for easy reference
 enum OrderIndex {
 	ORDER_SUM = 0,

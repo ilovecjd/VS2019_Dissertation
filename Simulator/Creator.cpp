@@ -343,13 +343,13 @@ double CCreator::CalculateLaborCost(const std::string& grade) {
 
 	switch (upperGrade) {
 	case 'H':
-		directLaborCost = 50;
+		directLaborCost = HI_HR_COST;
 		break;
 	case 'M':
-		directLaborCost = 39;
+		directLaborCost = MI_HR_COST;
 		break;
 	case 'L':
-		directLaborCost = 25;
+		directLaborCost = LO_HR_COST;
 		break;
 	default:
 		AfxMessageBox(_T("잘못된 등급입니다. 'H', 'M', 'L' 중 하나를 입력하세요."), MB_OK | MB_ICONERROR);

@@ -155,7 +155,7 @@ BOOL CSimulatorDlg::OnInitDialog()
 	m_pGlobalEnv->Hr_LeadTime = 4;
 	SetDlgItemInt(IDC_LEAD_TIME, m_pGlobalEnv->Hr_LeadTime);
 
-	m_pGlobalEnv->Cash_Init = (50 * hr_h + 39 * hr_m + 25 * hr_l) * 4 * 12 * 1.2; //인원수 대비 12개월;
+	m_pGlobalEnv->Cash_Init = (HI_HR_COST * hr_h + MI_HR_COST * hr_m + LO_HR_COST * hr_l) * 4 * 12 * 1.2; //인원수 대비 12개월;
 	SetDlgItemInt(IDC_CASH, m_pGlobalEnv->Cash_Init);
 
 	m_pGlobalEnv->ProblemCnt = 100;
@@ -164,7 +164,7 @@ BOOL CSimulatorDlg::OnInitDialog()
 	m_pGlobalEnv->selectOrder = 1;	// 선택 순서  1: 먼저 발생한 순서대로 2: 금액이 큰 순서대로 3: 금액이 작은 순서대로
 	SetDlgItemInt(IDC_ORDER, m_pGlobalEnv->selectOrder);
 
-	m_pGlobalEnv->recruit = 160;  // 작을수록 공격적인 인원 충원 144 : 시뮬레이션 끝까지 충원 없음
+	m_pGlobalEnv->recruit = 24;  // 작을수록 공격적인 인원 충원(해당 주 만큼을 유지 할 수 있는 이익 잉여가 쌓이면 충원) 
 	SetDlgItemInt(IDC_RECRUIT, m_pGlobalEnv->recruit);
 
 	m_pGlobalEnv->layoff = 0;  // 클수록 공격적인 인원 감축, 0 : 부도까지 인원 유지
@@ -173,7 +173,7 @@ BOOL CSimulatorDlg::OnInitDialog()
 	m_pGlobalEnv->ExpenseRate = 1.2;
 	SetDlgItemText(IDC_EXP_RATE, _T("1.2"));
 
-	m_pGlobalEnv->recruitTerm = 12;
+	m_pGlobalEnv->recruitTerm = 12; // 
 	SetDlgItemInt(IDC_RECUIT_TERM, m_pGlobalEnv->recruitTerm);
 
 	srand(static_cast<unsigned int>(time(nullptr)));
