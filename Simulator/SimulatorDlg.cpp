@@ -429,6 +429,7 @@ void CSimulatorDlg::OnBnClickedCreateProject()
 	}	
 	m_Progress->SetPos(0);
 }
+
 void CSimulatorDlg::MakeResult(CString strFileName, CString  strResultSheetName, CString  strOutSheetName, CString strInSheetName, int num, BOOL isDelete )
 {
 	Book* book = xlCreateXMLBook();  // Use xlCreateBook() for xls format	
