@@ -320,7 +320,8 @@ void CCompany::RemoveHR(int grade, int removeWeek)
 	// 나머지 기간의 비용 업데이트
 	// removeWeek 부터 grade 에 유휴인력이 있는지 검토
 	for (int i = removeWeek; i < m_GlobalEnv.maxWeek ;  i++) {
-		if (m_freeHR[grade][i] < 1)
+		int check = m_totalHR[grade][i] - m_doingHR[grade][i];
+		if (check < 1)
 			return;
 	}
 

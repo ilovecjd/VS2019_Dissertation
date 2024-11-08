@@ -28,7 +28,6 @@
 #define IDC_CASH                        1018
 #define IDC_PROGRESS                    1019
 #define IDC_ORDER                       1020
-#define IDC_REC_TERM                    1021
 #define IDC_RECUIT_TERM                 1021
 #define IDC_RECRUIT                     1022
 #define IDC_LAY_OFF                     1023

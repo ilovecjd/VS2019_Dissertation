@@ -167,7 +167,7 @@ BOOL CSimulatorDlg::OnInitDialog()
 	m_pGlobalEnv->recruit = 24;  // 작을수록 공격적인 인원 충원(해당 주 만큼을 유지 할 수 있는 이익 잉여가 쌓이면 충원) 
 	SetDlgItemInt(IDC_RECRUIT, m_pGlobalEnv->recruit);
 
-	m_pGlobalEnv->layoff = 0;  // 클수록 공격적인 인원 감축, 0 : 부도까지 인원 유지
+	m_pGlobalEnv->layoff = 24;  // 작을수록 공격적인 인원 감축, 
 	SetDlgItemInt(IDC_LAY_OFF, m_pGlobalEnv->layoff);
 
 	m_pGlobalEnv->ExpenseRate = 1.2;
