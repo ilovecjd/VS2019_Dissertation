@@ -158,7 +158,7 @@ BOOL CSimulatorDlg::OnInitDialog()
 	m_pGlobalEnv->Cash_Init = (HI_HR_COST * hr_h + MI_HR_COST * hr_m + LO_HR_COST * hr_l) * 52 * 1.2; //인원수 대비 12개월;
 	SetDlgItemInt(IDC_CASH, m_pGlobalEnv->Cash_Init);
 
-	m_pGlobalEnv->ProblemCnt = 100;
+	m_pGlobalEnv->ProblemCnt = 1000;
 	SetDlgItemInt(IDC_PROBLEM_CNT, m_pGlobalEnv->ProblemCnt);
 
 	m_pGlobalEnv->selectOrder = 1;	// 선택 순서  1: 먼저 발생한 순서대로 2: 금액이 큰 순서대로 3: 금액이 작은 순서대로
