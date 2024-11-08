@@ -423,17 +423,19 @@ void CSimulatorDlg::OnBnClickedCreateProject()
 		m_Progress->Invalidate();
 		
 		m_Progress->SetDlgItemTextW(IDC_PROGRESS, L"Make Result");
-		MakeResult(m_strFileName, strResultSheetName, strOutSheetName, i);
+		MakeResult(m_strFileName, strResultSheetName, strOutSheetName, strInSheetName ,i);
 		m_Progress->StepIt();
 		m_Progress->Invalidate();
 	}	
 	m_Progress->SetPos(0);
 }
-void CSimulatorDlg::MakeResult(CString strFileName, CString  strResultSheetName, CString  strOutSheetName, int num)
+void CSimulatorDlg::MakeResult(CString strFileName, CString  strResultSheetName, CString  strOutSheetName, CString strInSheetName, int num, BOOL isDelete )
 {
 	Book* book = xlCreateXMLBook();  // Use xlCreateBook() for xls format	
 	Sheet* resultSheet = nullptr;
 	Sheet* outSheet = nullptr;
+	int iOutNum = 0;
+	int iInNum = 0;
 #ifdef INCLUDE_LIBXL_KET	
 	book->setKey(_LIBXL_NAME, _LIBXL_KEY);
 #endif
@@ -448,13 +450,18 @@ void CSimulatorDlg::MakeResult(CString strFileName, CString  strResultSheetName,
 
 			if (sheet) {
 				if (wcscmp(sheet->name(), (LPCWSTR)strResultSheetName) == 0) {
-					resultSheet = sheet;
+					resultSheet = sheet;					
 				}
 				else if (wcscmp(sheet->name(), (LPCWSTR)strOutSheetName) == 0) {
 					outSheet = sheet;
+					iOutNum = i;
+				}
+				else if (wcscmp(sheet->name(), (LPCWSTR)strInSheetName) == 0) {
+					outSheet = sheet;
+					iInNum = i;
 				}
 			}
-			if (resultSheet && outSheet) break; // 둘 다 찾았으면 루프 종료
+			//if (resultSheet && outSheet) break; // 둘 다 찾았으면 루프 종료
 		}
 
 		// outSheet가 없으면 에러 처리
@@ -520,6 +527,12 @@ void CSimulatorDlg::MakeResult(CString strFileName, CString  strResultSheetName,
 		resultSheet->writeNum(num + 1, 6, EHR);
 		resultSheet->writeNum(num + 1, 7, TotaHR);
 		
+		// 사용이 끝난 시트는 지운다. 
+		if (isDelete = TRUE) {
+			book->delSheet(iOutNum);
+			book->delSheet(iInNum);
+		}
+
 		// 변경사항 저장
 		if (!book->save((LPCWSTR)strFileName)) {
 			AfxMessageBox(_T("Failed to save the file."));
@@ -630,7 +643,7 @@ void CSimulatorDlg::OnBnClickedOnlyRun()
 		strOutSheetName.Format(_T("Out%03d"), i);
 
 		OnlyRun(m_strFileName, strInSheetName, strOutSheetName);
-		MakeResult(m_strFileName, strResultSheetName, strOutSheetName, i);
+		MakeResult(m_strFileName, strResultSheetName, strOutSheetName, strInSheetName, i);
 	}
 }
 

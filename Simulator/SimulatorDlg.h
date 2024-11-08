@@ -53,7 +53,7 @@ public:
 	void GetMainParameters(ALL_ACT_TYPE* act, ALL_ACTIVITY_PATTERN* pattern);
 	void MakeProjectAndRun(CString strFileName, CString strInSheetName, CString strOutSheetName);
 	void OnlyRun(CString strFileName, CString strInSheetName, CString strOutSheetName);
-	void MakeResult(CString strFileName, CString  strResultSheetName, CString  strOutSheetName, int num);
+	void MakeResult(CString strFileName, CString  strResultSheetName, CString  strOutSheetName, CString strInSheetName, int num, BOOL isDelete = TRUE);
 	GLOBAL_ENV* m_pGlobalEnv;
 	afx_msg void OnBnClickedSimulation();
 	CProgressCtrl* m_Progress;
