@@ -32,8 +32,9 @@
 #define IDC_RECRUIT                     1022
 #define IDC_LAY_OFF                     1023
 #define IDC_EXP_RATE                    1024
-#define IDC_LEAD_TIME2                  1025
 #define IDC_MULTIPLES                   1025
+#define IDC_RECUIT_TERM2                1026
+#define IDC_RECUIT_POLICY               1026
 
 // Next default values for new objects
 // 

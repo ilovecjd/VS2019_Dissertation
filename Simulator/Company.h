@@ -47,6 +47,7 @@ private:
 	Dynamic2DArray m_expensesTable;
 	Dynamic2DArray m_balanceTable;
 
+	Dynamic2DArray m_MissingTable;
 	
 	
 	BOOL CheckLastWeek(int thisWeek);

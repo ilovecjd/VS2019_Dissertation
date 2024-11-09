@@ -89,6 +89,7 @@ void CCompany::TableInit()
 	m_incomeTable.Resize(1, m_GlobalEnv.maxWeek);
 	m_expensesTable.Resize(1, m_GlobalEnv.maxWeek);
 	m_balanceTable.Resize(1, m_GlobalEnv.maxWeek);
+	m_MissingTable.Resize(1, m_GlobalEnv.maxWeek);
 
 	m_doingHR.Clear(0);
 	m_totalHR.Clear(0);
@@ -106,6 +107,7 @@ void CCompany::TableInit()
 	m_incomeTable.Clear(0);
 	m_expensesTable.Clear(0);
 	m_balanceTable.Clear(0);
+	m_MissingTable.Clear(0);
 
 	m_totalHR[HR_HIG][0] = m_freeHR[HR_HIG][0] = m_GlobalEnv.Hr_Init_H;
 	m_totalHR[HR_MID][0] = m_freeHR[HR_MID][0] = m_GlobalEnv.Hr_Init_M;
@@ -248,39 +250,87 @@ BOOL CCompany::CheckLastWeek(int thisWeek)
 		return FALSE;
 	}
 
-	int term = 0;
-	term = thisWeek % m_GlobalEnv.recruitTerm;
-	if (term == 0)/// 인원 충원을 결정하자.
-	{		
-		// 현재 필요한 주당 유지 비용		
-		double rate = m_GlobalEnv.ExpenseRate;
-		int expenses = (m_totalHR[0][thisWeek] * HI_HR_COST * rate) + (m_totalHR[1][thisWeek] * MI_HR_COST * rate) + (m_totalHR[2][thisWeek] * LO_HR_COST * rate);
-
-		// 이익 잉여금 (현재 보유금 - 초기자금)				
-		int earnings = Cash - m_GlobalEnv.Cash_Init;
-		
-		if ( 0 < earnings) // 이익 상태이면 
+	if (0 == m_GlobalEnv.recruitPolicy) {// 증감 정책이 없으면 비용으로 충원
+		int term = 0;
+		term = thisWeek % m_GlobalEnv.recruitTerm;
+		if (term == 0)/// 인원 충원을 결정하자.
 		{
-			// 이익 잉여금으로 recruit 이상 유지 가능하면 충원
-			int temp = expenses * m_GlobalEnv.recruit;
-			if (earnings > temp) {
-				int i = rand() % 3; /// 고급,중급,초급중 아무나
-				AddHR(i, thisWeek + m_GlobalEnv.Hr_LeadTime);// 인원 충원 리드 타임
-			}
-		}
-		
-		else // 이익 잉여금이 손실이고   layoff 이상 이면 감원
-		{			
-			if (thisWeek > 24) { // 6개월간은 감원 없음.
-				//손실이   layoff 이상 이면 감원 
-				earnings = earnings * -1; //부호 바꾸고 비교하자
-				int temp = expenses * m_GlobalEnv.layoff; 
-				if (earnings > temp)
-				{			
-					int i = rand() % 3;  //인원 감원은 프로젝트 할당 상황을 보고 결정
-					RemoveHR(i, thisWeek + m_GlobalEnv.Hr_LeadTime);// 인원 감원 리드 타임
+			// 현재 필요한 주당 유지 비용		
+			double rate = m_GlobalEnv.ExpenseRate;
+			int expenses = (m_totalHR[0][thisWeek] * HI_HR_COST * rate) + (m_totalHR[1][thisWeek] * MI_HR_COST * rate) + (m_totalHR[2][thisWeek] * LO_HR_COST * rate);
+
+			// 이익 잉여금 (현재 보유금 - 초기자금)				
+			int earnings = Cash - m_GlobalEnv.Cash_Init;
+
+			if (0 < earnings) // 이익 상태이면 
+			{
+				// 이익 잉여금으로 recruit 이상 유지 가능하면 충원
+				int temp = expenses * m_GlobalEnv.recruit;
+				if (earnings > temp) {
+					int i = rand() % 3; /// 고급,중급,초급중 아무나
+					AddHR(i, thisWeek + m_GlobalEnv.Hr_LeadTime);// 인원 충원 리드 타임
 				}
 			}
+
+			else // 이익 잉여금이 손실이고   layoff 이상 이면 감원
+			{
+				if (thisWeek > 24) { // 6개월간은 감원 없음.
+					//손실이   layoff 이상 이면 감원 
+					earnings = earnings * -1; //부호 바꾸고 비교하자
+					int temp = expenses * m_GlobalEnv.layoff;
+					if (earnings > temp)
+					{
+						int i = rand() % 3;  //인원 감원은 프로젝트 할당 상황을 보고 결정
+						RemoveHR(i, thisWeek + m_GlobalEnv.Hr_LeadTime);// 인원 감원 리드 타임
+					}
+				}
+			}
+		}
+	}
+	else
+	{
+		if (thisWeek > 24) // 6개월간은 증원 감원 없음.
+		{ 
+			int totalMiss =0;
+			int totalFree_H_HR=0;
+			int totalFree_M_HR=0;
+			int totalFree_L_HR=0;
+
+			for (int i = 1; i < 9; i++) { //8동안
+				totalMiss += m_MissingTable[0][thisWeek - i]; // 인력부족으로 진행하지 못한일
+				totalFree_H_HR += m_freeHR[HR_HIG][thisWeek - i];// 유휴인력
+				totalFree_M_HR += m_freeHR[HR_MID][thisWeek - i];
+				totalFree_L_HR += m_freeHR[HR_LOW][thisWeek - i];
+			}
+			if (4 <= totalMiss) {
+				int i = 0;
+								// 가장 작은 값을 구하고 조건에 따라 i를 설정 
+				if (totalFree_H_HR < totalFree_M_HR && totalFree_H_HR < totalFree_L_HR && totalFree_H_HR <= 3) {
+					i = 0; // H가 가장 작고 3 이하
+				}
+				else if (totalFree_M_HR < totalFree_H_HR && totalFree_M_HR < totalFree_L_HR && totalFree_M_HR <= 3) {
+					i = 1; // M이 가장 작고 3 이하
+				}
+				else if (totalFree_L_HR < totalFree_H_HR && totalFree_L_HR < totalFree_M_HR && totalFree_L_HR <= 3) {
+					i = 2; // L이 가장 작고 3 이하
+				}
+				else {
+					i = 3; // 모든 값이 3보다 큼
+				}
+
+				if (i < 3 ) {
+					AddHR(i, thisWeek + m_GlobalEnv.Hr_LeadTime);// 인원 충원 리드 타임
+				}
+			}
+			if(4 <= totalFree_H_HR){
+				RemoveHR(HR_HIG, thisWeek + m_GlobalEnv.Hr_LeadTime);// 인원 감원 리드 타임
+			}
+			if (4 <= totalFree_M_HR) {
+				RemoveHR(HR_MID, thisWeek + m_GlobalEnv.Hr_LeadTime);// 인원 감원 리드 타임
+			}
+			if (4 <= totalFree_L_HR) {
+				RemoveHR(HR_LOW, thisWeek + m_GlobalEnv.Hr_LeadTime);// 인원 감원 리드 타임
+			}			
 		}
 	}
 	
@@ -555,16 +605,22 @@ BOOL CCompany::IsEnoughHR(int thisWeek, PROJECT* project)
 		}		
 	}
 
-	for (int i = thisWeek; i < m_GlobalEnv.maxWeek; i++) 
+	for (int i = thisWeek; i < m_GlobalEnv.maxWeek; i++)
 	{
-		if (m_totalHR[HR_HIG][i] < doingHR[HR_HIG][i])
+		if (m_totalHR[HR_HIG][i] < doingHR[HR_HIG][i]) {
+			m_MissingTable[0][thisWeek] += 1;
 			return FALSE;
+		}
 			
-		if (m_totalHR[HR_MID][i] < doingHR[HR_MID][i])
+		if (m_totalHR[HR_MID][i] < doingHR[HR_MID][i])		{
+			m_MissingTable[0][thisWeek] += 1;
 			return FALSE;
+		}
 
-		if (m_totalHR[HR_LOW][i] < doingHR[HR_LOW][i])
+		if (m_totalHR[HR_LOW][i] < doingHR[HR_LOW][i])	{
+			m_MissingTable[0][thisWeek] += 1;
 			return FALSE;
+		}
 	}
 
 	return TRUE;
@@ -680,8 +736,7 @@ void CCompany::SelectNewProject(int thisWeek)
 			else  // 내부프로젝트면 
 			{
 				if (IsInternalEnoughHR(thisWeek, project))
-				{
-					//if (2 <= (thisWeek%3))// 임시 검증코드 중간에 멈추면
+				{					
 					AddInternalProjectEntry(project, thisWeek);
 				}
 				else {
@@ -700,8 +755,7 @@ void CCompany::SelectNewProject(int thisWeek)
 					AddProjectEntry(project, thisWeek);
 				}
 			}
-		}
-		
+		}		
 	}
 }
 

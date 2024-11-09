@@ -179,6 +179,8 @@ BOOL CSimulatorDlg::OnInitDialog()
 	m_pGlobalEnv->multiples = 3; // 
 	SetDlgItemInt(IDC_MULTIPLES, m_pGlobalEnv->multiples);
 	
+	m_pGlobalEnv->recruitPolicy = 1; // 정책대로 충원 감원
+	SetDlgItemInt(IDC_RECUIT_POLICY, m_pGlobalEnv->recruitPolicy);
 
 	srand(static_cast<unsigned int>(time(nullptr)));
 	CString m_strFolderPath = _T("c:/ahnLab/");
@@ -332,7 +334,8 @@ void CSimulatorDlg::GetMainParameters(ALL_ACT_TYPE* act, ALL_ACTIVITY_PATTERN* p
 	m_pGlobalEnv->layoff = GetDlgItemInt(IDC_LAY_OFF);
 	m_pGlobalEnv->recruitTerm = GetDlgItemInt(IDC_RECUIT_TERM);
 	m_pGlobalEnv->multiples = GetDlgItemInt(IDC_MULTIPLES);
-
+	m_pGlobalEnv->recruitPolicy = GetDlgItemInt(IDC_RECUIT_POLICY);	
+		
 	GetDlgItemText(IDC_EXP_RATE, strTemp);
 	m_pGlobalEnv->ExpenseRate = _wtof(strTemp.GetString());
 	
