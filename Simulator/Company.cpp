@@ -217,17 +217,18 @@ BOOL CCompany::CheckLastWeek(int thisWeek)
 				if (win) {
 					for (int future = thisWeek; future < m_GlobalEnv.maxWeek; future++) {
 						if ((future - thisWeek) < (52 * 3)) {// 신제품은 3년만 유효
-							int tempIncome = project->profit / project->duration;
+							int tempIncome = project->profit;// 생성시 주당 비용을 생성한다. / project->duration;
 							m_incomeTable[0][future] += tempIncome;
 						}
 					}
 				}
-			}
+			}			
 			else {
 				// 2. 진행중이면 내부프로젝트는 이번주부터 시작 가능 으로 표시하고				// 이것도 필요 없음. 진행 정도를 기준으로 파악하자
 				//project->startAvail = thisWeek;	
 				// 내부 프로젝트의 인력 테이블 조정
-				RemoveInternalProjectEntry(project, thisWeek);
+				if (0 < m_GlobalEnv.selectOrder) // 0 번 정책은 내부와 외부 구분 없음
+					RemoveInternalProjectEntry(project, thisWeek);
 			}
 		}
 	}
@@ -357,23 +358,32 @@ void CCompany::SelectCandidates(int thisWeek)
 	for (int i = 0; i < m_totalProjectNum; i++)
 	{
 		PROJECT* project = m_AllProjects + i;
-		if ((project->category == 1)) { //내부프로젝트
-			if (project->orderDate <= thisWeek){ // 발주가 된것들중
-				if (project->duration > project->runningWeeks) { // 완료되지 않은 내부프로젝트
-					if (IsInternalEnoughHR(thisWeek, project)) // 내부 프로젝트 인원 체크			
-						m_candidateTable[j++] = project->ID;
-					else {
-						if (IsIntenalEnoughtNextWeekHR(thisWeek, project)) {// 내부 프로젝트는 전체 진행에 인원이 모자라도 다음주에만 진행 가능해도 인력 배치한다.
+		if (0 < m_GlobalEnv.selectOrder){ // 0번 정책은 내부 외부 구분 없음.
+			if ((project->category == 1)) { //내부프로젝트
+				if (project->orderDate <= thisWeek) { // 발주가 된것들중
+					if (project->duration > project->runningWeeks) { // 완료되지 않은 내부프로젝트
+						if (IsInternalEnoughHR(thisWeek, project)) // 내부 프로젝트 인원 체크			
 							m_candidateTable[j++] = project->ID;
+						else {
+							if (IsIntenalEnoughtNextWeekHR(thisWeek, project)) {// 내부 프로젝트는 전체 진행에 인원이 모자라도 다음주에만 진행 가능해도 인력 배치한다.
+								m_candidateTable[j++] = project->ID;
+							}
 						}
 					}
-				}				
+				}
+			}
+			else if (project->orderDate == thisWeek) // 이번주 발생 프로젝트
+			{
+				if (IsEnoughHR(thisWeek, project)) // 인원 체크			
+					m_candidateTable[j++] = project->ID;
 			}
 		}
-		else if(project->orderDate == thisWeek) // 이번주 발생 프로젝트
-		{
+		else {// 0번 정책은 내부 외부 구분 없음.
+			if (project->orderDate == thisWeek) // 이번주 발생 프로젝트
+			{
 			if (IsEnoughHR(thisWeek, project)) // 인원 체크			
 				m_candidateTable[j++] = project->ID;
+			}
 		}
 	}
 }
@@ -600,16 +610,26 @@ void CCompany::SelectNewProject(int thisWeek)
 		int id = m_candidateTable[j];
 
 		project = m_AllProjects + id;
-		if(project->category == 0){// 외부 프로젝트
+
+		if (0 < m_GlobalEnv.selectOrder) // 
+		{
+			if (project->category == 0) {// 외부 프로젝트
+				valueArray[j] = project->profit;
+			}
+			else
+			{
+				int Order = m_GlobalEnv.selectOrder;
+				if ((1 == Order) || ((4 == Order)))// 
+					valueArray[j] = 0;// project->profit * 4 * 12 * 3;
+				else
+					valueArray[j] = 99999;// project->profit * 4 * 12 * 3;
+			}
+		}
+		else // 0번 정책은 내부 외부 구분 없다.
+		{
 			valueArray[j] = project->profit;
 		}
-		else {  //
-			int Order = m_GlobalEnv.selectOrder;
-			if((1 == Order)||((4 == Order)))// 
-				valueArray[j] = 0;// project->profit * 4 * 12 * 3;
-			else
-				valueArray[j] = 99999;// project->profit * 4 * 12 * 3;
-		}
+
 		j ++;
 	}
 	
@@ -645,26 +665,39 @@ void CCompany::SelectNewProject(int thisWeek)
 
 		PROJECT* project = m_AllProjects + id;
 
-		if (project->category == 0)// 외부 프로젝트면
+		if (0 < m_GlobalEnv.selectOrder)
+		{
+			if (project->category == 0)// 외부 프로젝트면
+			{
+				if (project->startAvail < m_GlobalEnv.maxWeek)
+				{
+					if (IsEnoughHR(thisWeek, project))
+					{
+						AddProjectEntry(project, thisWeek);
+					}
+				}
+			}
+			else  // 내부프로젝트면 
+			{
+				if (IsInternalEnoughHR(thisWeek, project))
+				{
+					//if (2 <= (thisWeek%3))// 임시 검증코드 중간에 멈추면
+					AddInternalProjectEntry(project, thisWeek);
+				}
+				else {
+					if (IsIntenalEnoughtNextWeekHR(thisWeek, project)) {// 내부 프로젝트는 전체 진행에 인원이 모자라도 다음주에만 진행 가능해도 인력 배치한다.
+						AddInternalProjectEntry(project, thisWeek);
+					}
+				}
+			}
+		}
+		else // 0번 프로젝트는 내부외부 구분 없음
 		{
 			if (project->startAvail < m_GlobalEnv.maxWeek)
 			{
 				if (IsEnoughHR(thisWeek, project))
 				{
 					AddProjectEntry(project, thisWeek);
-				}
-			}
-		}
-		else  // 내부프로젝트면 
-		{
-			if (IsInternalEnoughHR(thisWeek, project))
-			{
-				//if (2 <= (thisWeek%3))// 임시 검증코드 중간에 멈추면
-				AddInternalProjectEntry(project, thisWeek);
-			}
-			else {
-				if (IsIntenalEnoughtNextWeekHR(thisWeek, project)) {// 내부 프로젝트는 전체 진행에 인원이 모자라도 다음주에만 진행 가능해도 인력 배치한다.
-					AddInternalProjectEntry(project, thisWeek);
 				}
 			}
 		}

@@ -74,8 +74,8 @@ int CCreator::CreateInternalProject(int Id,int week)
 
 	CreateInternalActivities(&Project);					//m_activities[MAX_ACT] 계산
 	Project.profit = CalculateHRAndProfit(&Project); // 총 수익을 계산한다.
-	CalculatePaymentSchedule(&Project);			//m_cashFlows[MAX_N_CF] 계산		
-
+	Project.profit = Project.profit * m_GlobalEnv.multiples/(52*3);
+	// CalculatePaymentSchedule(&Project);			//m_cashFlows[MAX_N_CF] 계산		
 
 	m_pProjects[0][Id] = Project;
 

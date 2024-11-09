@@ -176,6 +176,10 @@ BOOL CSimulatorDlg::OnInitDialog()
 	m_pGlobalEnv->recruitTerm = 12; // 
 	SetDlgItemInt(IDC_RECUIT_TERM, m_pGlobalEnv->recruitTerm);
 
+	m_pGlobalEnv->multiples = 3; // 
+	SetDlgItemInt(IDC_MULTIPLES, m_pGlobalEnv->multiples);
+	
+
 	srand(static_cast<unsigned int>(time(nullptr)));
 	CString m_strFolderPath = _T("c:/ahnLab/");
 	SetDlgItemText(IDC_SAVE_PATH, m_strFolderPath);
@@ -190,10 +194,7 @@ BOOL CSimulatorDlg::OnInitDialog()
 		currentTime.GetMinute());
 
 	SetDlgItemText(IDC_SAVE_FILE, fileName);
-
-	SetDlgItemInt(IDC_PROBLEM_CNT,100);
 	
-
 	m_Progress = (CProgressCtrl*)GetDlgItem(IDC_PROGRESS);
 
 	return TRUE;  // 포커스를 컨트롤에 설정하지 않으면 TRUE를 반환합니다.
@@ -330,6 +331,7 @@ void CSimulatorDlg::GetMainParameters(ALL_ACT_TYPE* act, ALL_ACTIVITY_PATTERN* p
 	m_pGlobalEnv->recruit = GetDlgItemInt(IDC_RECRUIT);
 	m_pGlobalEnv->layoff = GetDlgItemInt(IDC_LAY_OFF);
 	m_pGlobalEnv->recruitTerm = GetDlgItemInt(IDC_RECUIT_TERM);
+	m_pGlobalEnv->multiples = GetDlgItemInt(IDC_MULTIPLES);
 
 	GetDlgItemText(IDC_EXP_RATE, strTemp);
 	m_pGlobalEnv->ExpenseRate = _wtof(strTemp.GetString());
