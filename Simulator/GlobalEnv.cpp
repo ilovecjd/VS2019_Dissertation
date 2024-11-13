@@ -456,6 +456,9 @@ void write_global_env(Book* book, Sheet* sheet, GLOBAL_ENV* pGlobalEnv) {
 	sheet->writeNum(posY, posX++, pGlobalEnv->recruitTerm);
 	sheet->writeStr(posY, posX++, L"multiples");
 	sheet->writeNum(posY, posX++, pGlobalEnv->multiples);
+	sheet->writeStr(posY, posX++, L"recruitPolicy");
+	sheet->writeNum(posY, posX++, pGlobalEnv->recruitPolicy);
+
 
 	// Define and apply styles
 	Format* format = book->addFormat();
